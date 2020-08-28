@@ -5,9 +5,9 @@
 *batch
 *fits
 **/__pycache__/
-*pdf*
-*pkl*
-*txt*
+*pdf
+*pkl
+*txt
 
 # good list of ignores pulled from online #
 # Compiled source #
