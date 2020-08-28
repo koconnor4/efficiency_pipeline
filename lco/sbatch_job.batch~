@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH -o pyjob_lcofakeplant%j.out
+#SBATCH -p defq,defq-48core,BigMem
+#SBATCH --job-name=lcofakeplant
+#SBATCH --array=0-2
+
+# the array is inclusive (0-2 is 0,1,2 i.e. 3 jobs)
+# it is used to pass arguments to script in this case the field 
+
+echo -e '\n submitted Python job'
+echo 'hostname'
+hostname
+
+export iref=""
+export jref=""
+#/home/oconnorf/miniconda/envs/mirage/bin/python /work/oconnorf/jw_mirage/image_simulator.py
+#/home/oconnorf/miniconda/envs/sndrizpipe/bin/python /work/oconnorf/drizzle_all.py $SLURM_ARRAY_TASK_ID
+python /work/oconnorf/lco/lco_fakeSNpipeline.py 08.17 $SLURM_ARRAY_TASK_ID

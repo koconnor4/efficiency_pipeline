@@ -1,5 +1,6 @@
 # kfo ignores #
 **/output
+*~
 *out
 *batch
 *fits
