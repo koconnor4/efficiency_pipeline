@@ -165,25 +165,69 @@ def lattice_planted(mags,m50,pickle_to,saveas='lco_plants.pdf'):
 
 	plt.savefig(saveas,bbox_inches='tight')
 
-def target_image(image,targ_obj,target,saveas='target_image.pdf'):
+def target_image(image,target,saveas='target_image.pdf'):
     # take useful targ_obj values; comes from source_cat, is the photutils for the galaxy object
     # pixels and deg, sums ~ brightness in adu ~ for lco is straight counts (ie not yet rate isn't /exptime)
+    targ_obj,cuts,bkg_core,bkg_1,bkg_2 = target # unpack
+    cut_targ,cut_diff,cut_ref = cuts # assume target was provided diff and ref 
+    
+    (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)=bkg_core,bkg_1,bkg_2 # unpack again
+
+    # grab target parameters
     equivalent_radius = targ_obj['equivalent_radius'][0].value
     xy = (targ_obj['xcentroid'][0].value,targ_obj['ycentroid'][0].value) 
     semimajor_axis, semiminor_axis = targ_obj['semimajor_axis_sigma'][0].value,targ_obj['semiminor_axis_sigma'][0].value
     orientation = targ_obj['orientation'][0].value 
     
+    # cut around the image on target (already available/should be same as the cuts provided but doing using image provided so easy to understand in script)
+    cut_im = Cutout2D(image.data,xy,equivalent_radius*5) 
+    cut_xy = cut_im.center_cutout
+
+    ellipse = matplotlib.patches.Ellipse(cut_xy,semimajor_axis,semiminor_axis,angle=orientation,fill=None)
+
+    # bkg_i need to be re-calculated there is an error otherwise (I think due to passing mpl patch as kwarg)
+
     shift_x = equivalent_radius*np.cos(orientation*np.pi/180)
     shift_y = equivalent_radius*np.sin(orientation*np.pi/180)
+
+    # lets do a box on the ctr with length=width=radius 
+    # the patch anchors on sw so shift the cut_xy 
+    anchor_core = (cut_xy[0] - equivalent_radius/2, cut_xy[1] - equivalent_radius/2)
+    # the patch (show in figures)
+    box_core = matplotlib.patches.Rectangle(anchor_core,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_core = xy # the center of galaxy in image
+    cut_core = Cutout2D(image.data,xy_core,equivalent_radius)
     
-    # cut around the image on target; targ_size*3 to get a view around the bright core
-    cut_targ = Cutout2D(image.data,xy,equivalent_radius*5) 
-    cut_xy = cut_targ.center_cutout
-    cut_targ,bkg_core,bkg_1,bkg_2 = target # unpack
-    (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)=bkg_core,bkg_1,bkg_2 # unpack again
-    fig,ax=plt.subplots(2,2,figsize=(10,10))
+    # shift box an equivalent radius along orientation from photutils creating next box 
+    # assuming orientation ccw from x (east)
+    # yes the boxes will overlap slightly unless orientation fully along x or y
+    shift_x = equivalent_radius*np.cos(orientation*np.pi/180)
+    shift_y = equivalent_radius*np.sin(orientation*np.pi/180)
+    anchor_1 = (anchor_core[0]+shift_x,anchor_core[1]+shift_y)
+    box_1 = matplotlib.patches.Rectangle(anchor_1,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_1 = (xy[0]+shift_y,xy[1]+shift_y) 
+    cut_1 = Cutout2D(image.data,xy_1,equivalent_radius)
+    
+    # similar shift one more time 
+    anchor_2 = (anchor_core[0]+2*shift_x,anchor_core[1]+2*shift_y)
+    box_2 = matplotlib.patches.Rectangle(anchor_2,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_2 = (xy[0]+2*shift_y,xy[1]+2*shift_y) 
+    cut_2 = Cutout2D(image.data,xy_2,equivalent_radius)
+    
+    bkg_core,bkg_1,bkg_2 = (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)
+    
+    """
+    # to take a look at the ellipse that photutils found
+    fig,ax=plt.subplots()
     ellipse = matplotlib.patches.Ellipse(cut_xy,semimajor_axis,semiminor_axis,angle=orientation,fill=None)
-    ax[0][0].imshow(zscale(cut_targ.data))
+    ax.imshow(zscale(cut_targ.data))
+    ax.add_patch(patch)
+    """
+    fig,ax=plt.subplots(2,2,figsize=(10,10))
+    ax[0][0].imshow(zscale(cut_im.data))
     ax[0][0].add_patch(box_core)
     ax[0][0].add_patch(box_1)
     ax[0][0].add_patch(box_2)
@@ -199,7 +243,11 @@ def target_image(image,targ_obj,target,saveas='target_image.pdf'):
     ax[0][0].legend([shift0,core0],['$r_{eq}(\Theta$)','core'])
     # text that shows the boxes pixel sum, area, and flux ~ sum/area/exptime ... todo eventually get to mag/arcsec^2 and/or nsigma above sky bkg
     area = equivalent_radius**2 
-    exptime = image.header['exptime']
+    try:
+    	exptime = image.header['exptime']
+    except:
+    	# ref doesnt have the good stuff in hdr
+    	exptime = 300
     ax[0][1].text(0.1, 0.8, 'fcore ~ {:.1e} adu/s/pix^2'.format(np.sum(cut_core.data)/exptime/area),
         bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10},transform=ax[0][1].transAxes,
                  verticalalignment='bottom', horizontalalignment='left',
@@ -219,6 +267,7 @@ def target_image(image,targ_obj,target,saveas='target_image.pdf'):
     
     # todo get r_eq formatted to show getting key error because of {eq}, similar include theta
     #plt.show()
+    print('saveas has multiple arguments?',saveas)
     plt.savefig(saveas,bbox_inches='tight')
     plt.close('all')
 

@@ -4,16 +4,6 @@ import os
 from optparse import OptionParser
 parser = OptionParser()
 (options,args)=parser.parse_args()
-#print(sys.argv[0]) # the name of this command script  
-date_key = str(sys.argv[1]) # easy enough to change sbatch to get xx.xx date
-field_key = int(sys.argv[2]) # slurm array idx in sbatch that will be used to do the different fields 
-#print(date_key,field_key)
-
-all_dates = [x for x in glob.glob('/work/oconnorf/lco/*') if os.path.isdir(x)]
-date_path = os.path.join('/work/oconnorf/lco',date_key+'/*')
-all_fields = [x for x in glob.glob(date_path) if os.path.isdir(x)]
-field = all_fields[field_key]
-#print(all_fields,field)
 
 import copy
 import pickle
@@ -323,7 +313,7 @@ def gaussian2d(epsf,hdr=None):
                                    mean=5.)
     """
 
-def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001):
+def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001,targ_coord=None):
     """
     the image should be fits.open('trim.fits'), is trimmed/aligned properly w reference/differences
     for some reason reference doesn't have the catalog ra of the target strong lensing galaxy in header
@@ -332,8 +322,8 @@ def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast
     # to be able to translate from ra/dec <--> pixels on image
     wcs,frame = WCS(image.header),image.header['RADESYS'].lower()
     hdr = image.header
-    L1mean,L1med,L1sigma,L1fwhm = hdr['L1MEAN'],hdr['L1MEDIAN'],hdr['L1SIGMA'],hdr['L1FWHM'] # counts, fwhm in arcsec 
-    pixscale,saturate,maxlin = hdr['PIXSCALE'],hdr['SATURATE'],hdr['MAXLIN'] # arcsec/pixel, counts for saturation and non-linearity levels
+    #L1mean,L1med,L1sigma,L1fwhm = hdr['L1MEAN'],hdr['L1MEDIAN'],hdr['L1SIGMA'],hdr['L1FWHM'] # counts, fwhm in arcsec 
+    #pixscale,saturate,maxlin = hdr['PIXSCALE'],hdr['SATURATE'],hdr['MAXLIN'] # arcsec/pixel, counts for saturation and non-linearity levels
 
     # detect threshold uses sigma clipped statistics to get bkg flux and set a threshold for detected sources as objs above nsigma*bkg
     # bkg also available in the hdr of file, either way is fine  
@@ -367,8 +357,14 @@ def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast
     
     #CAT-RA  = 'blah'       / [HH:MM:SS.sss] Catalog RA of the object        
     #CAT-DEC = 'blah'       / [sDD:MM:SS.ss] Catalog Dec of the object
-    ra = image.header['CAT-RA']
-    dec = image.header['CAT-DEC']
+    if targ_coord == None:
+        # the source images all have cat-ra cat-dec, will default grab target galaxy location from hdr
+        ra = image.header['CAT-RA']
+        dec = image.header['CAT-DEC']
+    else:
+        # if using the ref to detect source objs the target stuff isn't in there will need to provide tuple taken from source hdr 
+        ra,dec = targ_coord # unpack
+
     lensing_gal = SkyCoord(ra,dec,unit=(u.hourangle,u.deg))
     pix_gal = astropy.wcs.utils.skycoord_to_pixel(lensing_gal,wcs)
 
@@ -404,26 +400,55 @@ def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast
     
     return cat,image,threshold,segm,targ_obj
 
-def target(image,targ_obj):
-    # take useful targ_obj values; comes from source_cat, is the photutils for the galaxy object
-    # pixels and deg, sums ~ brightness in adu ~ for lco is straight counts (ie not yet rate isn't /exptime)
-    equivalent_radius = targ_obj['equivalent_radius'][0].value
-    xy = (targ_obj['xcentroid'][0].value,targ_obj['ycentroid'][0].value) 
-    semimajor_axis, semiminor_axis = targ_obj['semimajor_axis_sigma'][0].value,targ_obj['semiminor_axis_sigma'][0].value
-    orientation = targ_obj['orientation'][0].value 
+def target(image,targ_obj,ref=None,diff=None):
+    if len(targ_obj) == 0:
+        # the target isnt detected in image by my source_cat (photutils)...likely bad skymag bkg
+        # going to use ref.fits to cut around the target and extract the parameters from these
+        print('the target obj wasnt detected in source image, using ref image to get the target photutil params')
+        #ref = my_data['ref.fits']
+        wcs,frame = WCS(image.header),image.header['RADESYS'].lower()
+        # the target strong lensing galaxy position
+        ra=image.header['CAT-RA']
+        dec=image.header['CAT-DEC']
+        targ_coord = (ra,dec)
+        # not cutting the ref on target to save computation time, get hdr error in source cat if do
+        #coord = SkyCoord(ra,dec,unit=(u.hourangle,u.deg))        
+        #pix=astropy.wcs.utils.skycoord_to_pixel(coord,wcs) # x,y pixel location
+        #cut_ref = Cutout2D(ref.data,pix,25) # is 25 pixels big enough for any of the strong lens objects but small enough to avoid other objs?
+        # photutils source properties to detect objs in image
+        #cut_ref_catalog = source_cat(cut_ref)
+        #cut_ref_cat,cut_ref_image,threshold,segm,targ_obj = source_catalog # unpacked to make a little clearer
+        ref_catalog = source_cat(ref,targ_coord=targ_coord)
+        ref_cat,ref_image,threshold,segm,targ_obj = ref_catalog # unpacked to make a little clearer
+        # take useful photutil params for strong lensing galaxy target 
+        # pixels and deg, sums ~ brightness in adu ~ for lco is straight counts (ie not yet rate isn't /exptime)
+        equivalent_radius = targ_obj['equivalent_radius'][0].value
+        xy = (targ_obj['xcentroid'][0].value,targ_obj['ycentroid'][0].value) 
+        semimajor_axis, semiminor_axis = targ_obj['semimajor_axis_sigma'][0].value,targ_obj['semiminor_axis_sigma'][0].value
+        orientation = targ_obj['orientation'][0].value 
+    else:
+        # the source image detected the targ_obj so take useful values already available (no need to get ref involved)
+        # pixels and deg, sums ~ brightness in adu ~ for lco is straight counts (ie not yet rate isn't /exptime)
+        equivalent_radius = targ_obj['equivalent_radius'][0].value
+        xy = (targ_obj['xcentroid'][0].value,targ_obj['ycentroid'][0].value) 
+        semimajor_axis, semiminor_axis = targ_obj['semimajor_axis_sigma'][0].value,targ_obj['semiminor_axis_sigma'][0].value
+        orientation = targ_obj['orientation'][0].value 
     
-    # cut around the image on target; targ_size*3 to get a view around the bright core
-    cut_targ = Cutout2D(image.data,xy,equivalent_radius*5) 
+    # cut around the image on target
+    cut_targ = Cutout2D(image.data,xy,equivalent_radius*5)
+    cuts = [cut_targ]
+    if diff:
+        cut_diff = Cutout2D(diff.data,xy,equivalent_radius*5)
+        cuts.append(cut_diff)
+    if ref:
+        cut_ref = Cutout2D(ref.data,xy,equivalent_radius*5)
+        cuts.append(cut_ref)
+
+    # now going to grab (cutouts/patches) of boxes on galaxy 
     cut_xy = cut_targ.center_cutout
-    
-    """
-    # to take a look at the galaxy and ellipse that photutils found
-    fig,ax=plt.subplots()
-    ellipse = matplotlib.patches.Ellipse(cut_xy,semimajor_axis,semiminor_axis,angle=orientation,fill=None)
-    ax.imshow(zscale(cut_targ.data))
-    ax.add_patch(patch)
-    """
-    
+    shift_x = equivalent_radius*np.cos(orientation*np.pi/180)
+    shift_y = equivalent_radius*np.sin(orientation*np.pi/180)
+
     # lets do a box on the ctr with length=width=radius 
     # the patch anchors on sw so shift the cut_xy 
     anchor_core = (cut_xy[0] - equivalent_radius/2, cut_xy[1] - equivalent_radius/2)
@@ -453,17 +478,13 @@ def target(image,targ_obj):
     
     bkg_core,bkg_1,bkg_2 = (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)
     
-    """
-    fig,ax=plt.subplots()
-    ellipse = matplotlib.patches.Ellipse(cut_xy,semimajor_axis,semiminor_axis,angle=orientation,fill=None)
-    ax.imshow(zscale(cut_targ.data))
-    ax.add_patch(box_core)
-    ax.add_patch(box_1)
-    ax.add_patch(box_2)
-    """
-    return cut_targ,bkg_core,bkg_1,bkg_2
+    if diff or ref:
+        # default diff None and ref None but if provided will return list of cuts order like [source,diff,ref]
+        return targ_obj,cuts,bkg_core,bkg_1,bkg_2
+    else:
+        return targ_obj,cut_targ,bkg_core,bkg_1,bkg_2
 
-def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted.fits'):
+def plant(image,psf,source_cat,hdr=None,mag=None,location=None,zp=None,plantname='planted.fits'):
     """
     the image should be the fits.open('difference.fits'), will add SN directly to here
     psf should be the epsf_builder(stars), ie a previous step is needed to check that have epsf which looks good
@@ -474,14 +495,16 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
     # unpack the source_cat so can use the targ_obj to place SN later if not given a location explicitly
     cat,orig_image,threshold,segm,targ_obj=source_cat # orig_image ~ meaning that pointing which source cat was run on not a diff
     
-    skymag=image.header['SKYMAG'] # computed [mag/arcsec^2]
-    skybr=image.header['WMSSKYBR'] # meas
-    pixscale=image.header['PIXSCALE'] # arcsec/pixel
-    mean=image.header['L1MEAN'] # sigma-clipped mean bkg [counts]
-    med=image.header['L1MEDIAN']
-    sig=image.header['L1SIGMA']
-    fwhm=image.header['L1FWHM']
-    exptime=image.header['EXPTIME']
+    # if image is the diff, (or any of the cutouts) none of these are available, provide it explicitly from source hdr
+    skymag=hdr['SKYMAG'] # computed [mag/arcsec^2]
+    skybr=hdr['WMSSKYBR'] # meas
+    pixscale=hdr['PIXSCALE'] # arcsec/pixel
+    mean=hdr['L1MEAN'] # sigma-clipped mean bkg [counts]
+    med=hdr['L1MEDIAN']
+    sig=hdr['L1SIGMA']
+    fwhm=hdr['L1FWHM']
+    exptime=hdr['EXPTIME']
+
     #print('L1: mean,exptime,pixscale,fwhm',mean,exptime,pixscale,fwhm)
     # the sigma-clipped stats I think should be same as L1 
     mean_val, median_val, std_val = sigma_clipped_stats(image.data, sigma=2.)  
@@ -505,7 +528,7 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
     #print('mu ',mu)
     cppsf = copy.copy(psf.data*mu) 
     
-    wcs,frame = WCS(image.header),image.header['RADESYS'].lower()
+    wcs,frame = WCS(hdr),hdr['RADESYS'].lower()
     lattice,boxes = False,False 
     if location==None:
         # use the targ obj to place SN
@@ -532,7 +555,6 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
         boxes = True
     else:
         # give arb skycoord loc (ra/dec) and translate to pixels for plant
-        wcs,frame = WCS(image.header),image.header['RADESYS'].lower()
         pix=astropy.wcs.utils.skycoord_to_pixel(location,wcs) # x,y pixel location
         revpix = copy.copy(list(pix)) # row,col location for adding to data... y,x
         revpix.reverse()
@@ -556,13 +578,13 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
             np.float64(cpim)
             
         # inserting True fakeSN into hdr w the pix location
-        hdr = copy.copy(image.header)
-        hdr['fakeSN']=True 
-        hdr['fakeSN_loc']='boxes' 
-        hdr['NfakeSNe']=str(len(location))
-        hdr['fakeSNmag']=str(mag)
-        hdr['fakeZP']=str(zp)
-        fits.writeto(plantname,cpim,hdr,overwrite=True)
+        cphdr = copy.copy(hdr)
+        cphdr['fakeSN']=True 
+        cphdr['fakeSN_loc']='boxes' 
+        cphdr['NfakeSNe']=str(len(location))
+        cphdr['fakeSNmag']=str(mag)
+        cphdr['fakeZP']=str(zp)
+        fits.writeto(plantname,cpim,cphdr,overwrite=True)
         print('{} SNe mag ~ {} (epsf*=mu ~ {}) planted in boxes by targ; zp ~ {}'.format(len(location),mag,mu,zp))
         plant_im = fits.open(plantname)[0]  
         return plant_im,location
@@ -584,13 +606,13 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
             np.float64(cpim)
             
         # inserting True fakeSN into hdr w the pix location
-        hdr = copy.copy(image.header)
-        hdr['fakeSN']=True 
-        hdr['fakeSN_loc']='lattice' 
-        hdr['NfakeSNe']=str(len(pixels))
-        hdr['fakeSNmag']=str(mag)
-        hdr['fakeZP']=str(zp)
-        fits.writeto(plantname,cpim,hdr,overwrite=True)
+        cphdr = copy.copy(hdr)
+        cphdr['fakeSN']=True 
+        cphdr['fakeSN_loc']='lattice' 
+        cphdr['NfakeSNe']=str(len(pixels))
+        cphdr['fakeSNmag']=str(mag)
+        cphdr['fakeZP']=str(zp)
+        fits.writeto(plantname,cpim,cphdr,overwrite=True)
         print('{} SNe mag ~ {} (epsf*=mu ~ {}) planted in lattice across image; zp ~ {}'.format(len(pixels),mag,mu,zp))
         plant_im = fits.open(plantname)[0]  
         return plant_im,pixels
@@ -607,10 +629,10 @@ def plant(image,psf,source_cat,mag=None,location=None,zp=None,plantname='planted
         cpim[rows[:, None], cols] += cppsf
         np.float64(cpim)
         # write the image with planted SN added to a new fits file (inserting True fakeSN into hdr)
-        hdr = copy.copy(image.header)
-        hdr['fakeSN']=True 
-        hdr['fakeSN_loc']=str(pix)
-        plant_im = fits.writeto(plantname,cpim,hdr,overwrite=True)
+        cphdr = copy.copy(hdr)
+        cphdr['fakeSN']=True 
+        cphdr['fakeSN_loc']=str(pix)
+        plant_im = fits.writeto(plantname,cpim,cphdr,overwrite=True)
         print('SN mag ~ {} planted in image w bkg mag ~ {} at {} written to {}; zp ~ {}'.format(mag,skybr,location,plantname,zp))
         return plant_im 
 
@@ -716,12 +738,22 @@ def detection_efficiency(plant,cat):
     return efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl
 
 def lco_pipe():
+    #print(sys.argv[0]) # the name of this command script  
+    date_key = str(sys.argv[1]) # easy enough to change sbatch to get xx.xx date
+    field_key = int(sys.argv[2]) # slurm array idx in sbatch that will be used to do the different fields 
+    # lco_path ~ current working dir with scripts and sub-dirs of data  
+    lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
+    # all the dates w lco data in the lco_path 
+    all_dates = [x for x in glob.glob(lco_path+'/*') if os.path.isdir(x)]
+    # your batch should have xx.xx date given so script knows which set of fields you want to do 
+    date_path = os.path.join(lco_path,date_key+'/*')
+    all_fields = [x for x in glob.glob(date_path) if os.path.isdir(x)]
+    field = all_fields[field_key]
     # which date folder are we in and which field was this slurm idx job 
-    print(date_key,field_key,field)
 
     # all the reduced fits images needed 
     my_data = get_data(field)
-    
+
     # each field should have a folder source_im (along w dia_out and dia_trim) 
     # in it is the image you want to do this for
     # ie the one that psf is measured on and SNe planted to
@@ -730,6 +762,7 @@ def lco_pipe():
     filename=source_im.split('/')[-1]
     image = my_data[filename]
     diff_image = my_data['d_'+filename]
+    ref_image = my_data['ref.fits']
     hdr = image.header
     groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
     print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2'.format(filename,groupid,L1fwhm,pixscale,skybr))
@@ -739,7 +772,7 @@ def lco_pipe():
     #print(pickle_to)
     
     # photutils source properties to detect objs in image
-    source_catalog = source_cat(image)
+    source_catalog = source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001,targ_coord=None)
     cat,image,threshold,segm,targ_obj = source_catalog # unpacked to make a little clearer
     pickle.dump(cat,open(pickle_to + '_source_cat.pkl','wb'))
 
@@ -761,34 +794,40 @@ def lco_pipe():
     lco_figures.used_stars(fitted_stars,saveas=pickle_to+'_stars.pdf')
 
     # target galaxy work, tuples cutting boxes around target (data,patch), how/if planting on cores might lower detection efficiency
-    target_boxes = target(image,targ_obj) 
-    cut_targ,bkg_core,bkg_1,bkg_2 = target_boxes # unpacked
-    # make figure (on the source im without the plant just shows target gal and boxes)
-    lco_figures.target_image(image,targ_obj,target_boxes,saveas=pickle_to+'_target_image.pdf')
+    # also returns targ_obj again account for updates using ref (in the cases where empty targ_obj ie not detected in source)
+    target_boxes = target(image,targ_obj,ref=ref_image,diff=diff_image) 
+    targ_obj,cuts,bkg_core,bkg_1,bkg_2 = target_boxes # unpacked
+    cut_targ,cut_diff,cut_ref = cuts # unpack cuts around target source,diff,and ref
+    # make figures from cuts on target (without the plant just shows target gal and boxes)
+    lco_figures.target_image(image,target_boxes,saveas=pickle_to+'_target_sourceim.pdf')
+    lco_figures.target_image(diff_image,target_boxes,saveas=pickle_to+'_target_diffim.pdf')
+    lco_figures.target_image(ref_image,target_boxes,saveas=pickle_to+'_target_refim.pdf')
+
+    # measured psf is now going to be scaled to different magnitudes and planted in the difference image
+    mags = np.arange(skybr-4.5,skybr+3,0.5) #zp ~ 23.5 # rough zp 
+
+    # this loop (repeatedly) plants near target galaxy; repeated so efficiency can be determined
     # the box plant wants a list of pixel coordinates, accessing from the target boxes here
-    box_locations = [bkg_core[0].center_original,bkg_1[0].center_original,bkg_2[0].center_original] # [0] so cut not patch
-    
+    target_locations_orig = [bkg_core[0].center_original,bkg_1[0].center_original,bkg_2[0].center_original] # [0] so cut not patch
+    target_locations_cutout = [bkg_core[0].center_cutout,bkg_1[0].center_cutout,bkg_2[0].center_cutout]
+    for mag in mags:
+        # planting into difference image
+        box_plantname = '{}_planted_targ_mag{}.fits'.format(pickle_to,str(mag))
+        box_planted_orig = plant(diff_image,epsf,source_catalog,hdr=hdr,mag=mag,location=target_locations_orig,zp=None,plantname=box_plantname)
+        # unpack
+        box_plant_im,box_pixels = box_planted_orig 
+        # make target figures (similar to prev w source but now diff and plants)
+        lco_figures.target_image(box_plant_im,target_boxes,saveas=pickle_to+'_target_plantdiff_mag{}.pdf'.format(str(mag)))
+        
     # lattice plant into the difference 
     locations = lattice(image)
-    #zp = 23.5 # rough zp just used to choose mags to plant and measure
-    mags = np.arange(skybr-4.5,skybr+3,0.5)
     efficiencies = []
     for mag in mags:
         # create plant image; zp None, using measure sky mag/arcsec^2 from L1 hdr to set
         plantname = '{}_planted_lattice_mag{}.fits'.format(pickle_to,str(mag))
-        planted = plant(diff_image,epsf,source_catalog,mag=mag,location=locations,zp=None,plantname=plantname)
+        planted = plant(diff_image,epsf,source_catalog,hdr=hdr,mag=mag,location=locations,zp=None,plantname=plantname)
         plant_im,pixels = planted # unpack
 
-        # also create box plant images TODO worry about efficiency, m50 for this later
-        box_plantname = '{}_planted_box_mag{}.fits'.format(pickle_to,str(mag))
-        box_planted = plant(diff_image,epsf,source_catalog,mag=mag,location=box_locations,zp=None,plantname=box_plantname)
-        box_plant_im,box_pixels = box_planted # unpack
-        try:
-            # make figure (similar to source but now w diff and plants)
-            lco_figures.target_image(box_plant_im,targ_obj,target_boxes,saveas=pickle_to+'_target_plantdiff_mag{}.pdf'.format(str(mag)))
-        except:
-            print('todo fix this, getting weird RuntimeError: Can not put single artist in more than one figure near ax[0][0].add_patch(box_core)')
-            pass
         # source properties of detected objs in fake image
         fakesource_cat = source_cat(plant_im)
         fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
