@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 30})
 from matplotlib.patches import Circle
 import numpy as np
+from scipy.optimize import curve_fit
 
 import astropy
 from astropy.io import ascii,fits
@@ -115,22 +116,41 @@ def used_stars(fitted_stars,saveas='lco_stars.pdf'):
 		ax[i].imshow(zscale(tmp[i]))
 	plt.savefig(saveas,bbox_inches='tight')
 
-def detection_efficiency(mags,efficiencies,m50,saveas='lco_detection_efficiency.pdf'):
-	# prelim results
-	#mags,efficiencies=[20.41,20.91,21.41,21.91,22.41,22.91,23.41,23.91,24.41],[1,1,0.849,0.135,0.022,.0128,.0125,.0126,.0126]
-	matplotlib.rcParams.update({'font.size': 30})
-	fig, ax = plt.subplots(1,1,figsize=(5, 5))
-	#fig.add_subplot()
-	ax.plot(mags,efficiencies,marker='o')
-	ax.title.set_text('Detection Efficiency')
-	ax.set_xlabel('mag',fontsize=45)
-	tmp = [m50-2,m50,m50+2]
-	xticks = [float("{:.1f}".format(i)) for i in tmp]
-	ax.set_xticks(xticks)
-	ax.set_yticks([0,0.25,0.5,0.75,1])
-	plt.vlines(m50,0,1,linestyle='--',color='black',label='m50 ~ {:.2f}'.format(m50))
-	plt.legend(bbox_to_anchor=(1,-0.25))
-	plt.savefig(saveas,bbox_inches='tight')
+
+def efficiency(m,m50,alpha):
+    #https://arxiv.org/pdf/1509.06574.pdf, strolger 
+    return (1+np.exp(alpha*(m-m50)))**-1
+
+def detection_efficiency(mags,efficiencies,m50,targ,skybr,zp,saveas='lco_detection_efficiency.pdf'):
+    matplotlib.rcParams.update({'font.size': 30})
+    fig, ax = plt.subplots(1,1,figsize=(5, 5))
+    #fig.add_subplot()
+    ax.scatter(mags,efficiencies,marker='o')
+    ax.title.set_text('Detection Efficiency')
+    ax.text(max(mags)+1,0.8, r'$skybr \sim {:.2f} mag/arcsec^2 $'.format(skybr), fontsize=25,rotation=0)
+    ax.text(max(mags)+1,0.6, r'$maxtarget \sim {:.2f} mag$'.format(-2.5*np.log10(targ[0]['max_value'][0])+zp), fontsize=25,rotation=0)
+    ax.text(max(mags)+1,0.4, r'$mintarget \sim {:.2f} mag$'.format(-2.5*np.log10(targ[0]['min_value'][0])+zp), fontsize=25,rotation=0)
+    ax.text(max(mags)+1,0.2, r'$target \sim {:.2f} mag$'.format(-2.5*np.log10(targ[0]['source_sum'][0]/targ[0]['area'][0].value)+zp), fontsize=25,rotation=0)
+    ax.set_xlabel('mag',fontsize=45)
+    tmp = [m50-2,m50,m50+2]
+    xticks = [float("{:.1f}".format(i)) for i in tmp]
+    ax.set_xticks(xticks)
+    ax.set_yticks([0,0.25,0.5,0.75,1])
+    # lets fit smooth exp model to the efficiency data
+    x = mags
+    y = efficiencies
+    # init guesses m50 from interp and alpha ~ 5 pretty steep drop
+    alpha = 5
+    init_vals = [m50,alpha]  # for [m50,alpha]
+    best_vals, covar = curve_fit(efficiency, x, y, p0=init_vals)
+    print('best_vals: {}'.format(best_vals))
+    m50,alpha = best_vals
+    mags = np.linspace(min(mags),max(mags),1000) # use many to get smooth model
+    e = efficiency(mags,m50,alpha)
+    plt.plot(mags,e)
+    plt.vlines(m50,0,1,linestyle='--',color='black',label=r'm50 ~ {:.2f}, $\alpha$ ~ {:.1f}'.format(m50,alpha))
+    plt.legend(bbox_to_anchor=(1.5,-0.25))
+    plt.savefig(saveas,bbox_inches='tight')
 
 def lattice_planted(mags,m50,pickle_to,saveas='lco_plants.pdf'):
 	# get a look at grid of SNe from clearly visible high detection rate to un-detected
@@ -164,6 +184,110 @@ def lattice_planted(mags,m50,pickle_to,saveas='lco_plants.pdf'):
 	ax[1][1].set_yticks([])
 
 	plt.savefig(saveas,bbox_inches='tight')
+
+def view_targetplant(image,ref,diff,diffplant,target,zp,saveas='targetplant.pdf'):
+    # take useful targ_obj values; comes from source_cat, is the photutils for the galaxy object
+    # pixels and deg, sums ~ brightness in adu ~ for lco is straight counts (ie not yet rate isn't /exptime)
+    targ_obj,cuts,bkg_core,bkg_1,bkg_2 = target # unpack
+    cut_targ,cut_diff,cut_ref = cuts # assume target was provided diff and ref 
+    
+    (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)=bkg_core,bkg_1,bkg_2 # unpack again
+
+    # grab target parameters
+    area = targ_obj['area'].value[0] # pix^2 isophotal area, the segmentation obj above threshold
+    pixscale = image.header['pixscale'] # arcsec/pixel
+    equivalent_radius = targ_obj['equivalent_radius'][0].value # radius of circular obj with area 
+    xy = (targ_obj['xcentroid'][0].value,targ_obj['ycentroid'][0].value) 
+    semimajor_axis, semiminor_axis = targ_obj['semimajor_axis_sigma'][0].value,targ_obj['semiminor_axis_sigma'][0].value #xtheta ytheta defined analytically for segm image using variance then partial theta ~ 0 gives an ellipse  
+    orientation = targ_obj['orientation'][0].value # deg a-axis with respect to first image axis
+    
+    # cut around the image on target (already available/should be same as the cuts provided but doing using image provided so easy to understand in script)
+    cut_im = Cutout2D(image.data,xy,equivalent_radius*5) 
+    cut_ref = Cutout2D(ref.data,xy,equivalent_radius*5)
+    cut_diff = Cutout2D(diff.data,xy,equivalent_radius*5)
+    cut_diffplant = Cutout2D(diffplant.data,xy,equivalent_radius*5)
+    
+    cut_xy = cut_im.center_cutout
+    
+    # usually isophotal limit well represented by R ~ 3
+    R = 3
+    # mpl ellipse patch wants ctr in pixels, width and height as full lengths along image x,y
+    # angle is rotation in deg ccw 
+    # I'm assuming that angle means it wants the dir of semimajor ~ a with respect to x (no image shown descr vague)
+    # this is a little questionable at the moment
+    width = R*2*semimajor_axis*np.cos(orientation*np.pi/180)
+    height = R*2*semimajor_axis*np.sin(orientation*np.pi/180)
+    ellipse = matplotlib.patches.Ellipse(cut_xy,width,height,angle=orientation,fill=None)
+
+    circle = matplotlib.patches.Circle(cut_xy,radius=equivalent_radius,fill=None)
+    
+    # bkg_i need to be re-calculated there is an error otherwise (I think due to passing mpl patch as kwarg)
+
+    shift_x = equivalent_radius*np.cos(orientation*np.pi/180)
+    shift_y = equivalent_radius*np.sin(orientation*np.pi/180)
+    
+    # lets do a box on the ctr with length=width=radius 
+    # the patch anchors on sw so shift the cut_xy 
+    anchor_core = (cut_xy[0] - equivalent_radius/2, cut_xy[1] - equivalent_radius/2)
+    # the patch (show in figures)
+    box_core = matplotlib.patches.Rectangle(anchor_core,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_core = xy # the center of galaxy in image
+    cut_core = Cutout2D(image.data,xy_core,equivalent_radius)
+
+    # shift box an equivalent radius along orientation from photutils creating next box 
+    # assuming orientation ccw from x (east)
+    # yes the boxes will overlap slightly unless orientation fully along x or y
+    anchor_1 = (anchor_core[0]+shift_x,anchor_core[1]+shift_y)
+    box_1 = matplotlib.patches.Rectangle(anchor_1,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_1 = (xy[0]+shift_y,xy[1]+shift_y) 
+    cut_1 = Cutout2D(image.data,xy_1,equivalent_radius)
+    
+    # similar shift one more time 
+    anchor_2 = (anchor_core[0]+2*shift_x,anchor_core[1]+2*shift_y)
+    box_2 = matplotlib.patches.Rectangle(anchor_2,equivalent_radius,equivalent_radius,fill=None)
+    # the cut (does sum for bkg)
+    xy_2 = (xy[0]+2*shift_y,xy[1]+2*shift_y) 
+    cut_2 = Cutout2D(image.data,xy_2,equivalent_radius)
+    
+    bkg_core,bkg_1,bkg_2 = (cut_core,box_core),(cut_1,box_1),(cut_2,box_2)
+    
+    # get to plotting
+    fig,ax=plt.subplots(2,2,figsize=(10,10))
+    ax[0][0].imshow(zscale(cut_im.data))
+    #ellipse = matplotlib.patches.Ellipse(cut_xy,semimajor_axis,semiminor_axis,angle=orientation,fill=None)
+    ax[0][0].add_patch(circle) # ellipse a little questionable at the moment, mpl patch is vague on orientation 
+    ax[0][0].title.set_text('image')
+    ax[0][1].imshow(zscale(cut_ref.data))
+    ax[0][1].title.set_text('ref')
+    ax[1][0].imshow(zscale(cut_diff.data))
+    ax[1][0].title.set_text('diff')
+    ax[1][1].imshow(zscale(cut_diffplant.data))
+    ax[1][1].title.set_text('plantdiff')
+    
+    # do some markers showing centroid and req along orientation 
+    xrange,yrange=np.linspace(cut_xy[0],cut_xy[0]+shift_x),np.linspace(cut_xy[1],cut_xy[1]+shift_y)
+    #shift0 = ax[0][0].scatter(xrange,yrange,s=equivalent_radius**2,marker='.',color='black')
+    core0 = ax[0][0].scatter(cut_xy[0], cut_xy[1],s=2*equivalent_radius**2, marker="*",color='white')
+    #ax[0][0].legend([shift0,core0],['$r_{eq}(\Theta$)','core'])
+    ax[0][0].legend([core0],['centroid'])
+    # text that shows the boxes pixel sum, area, and flux ~ sum/area/exptime ... todo eventually get to mag/arcsec^2 and/or nsigma above sky bkg
+    area = np.pi*equivalent_radius**2 
+    exptime = image.header['exptime']
+
+    ax[0][1].text(1.1,1.01,'Target: Area ~ {:.1f} $pix^2$ ~ {:.1f} $arcsec^2$ \n [a,b], theta ~ [{:.1f} {:.1f}] pix, {:.1f} deg (a ccw +x) \n max, min, avg ~ {:.2f} {:.2f} {:.2f} mag'.format(area,area*pixscale**2,semimajor_axis,semiminor_axis,orientation,-2.5*np.log10(targ_obj['max_value'][0])+zp,-2.5*np.log10(targ_obj['min_value'][0])+zp,-2.5*np.log10(targ_obj['source_sum'][0]/targ_obj['area'][0].value)+zp),
+                 bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10},transform=ax[1][1].transAxes,
+                 verticalalignment='top', horizontalalignment='left',
+        color='black', fontsize=15)
+
+    ax[0][1].text(1.1,0.5,'SN: m ~ {:.2f}'.format(float(diffplant.header['fakeSNmag'])),
+                 bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 10},transform=ax[1][1].transAxes,
+                 verticalalignment='top', horizontalalignment='left',
+        color='black', fontsize=15)
+    plt.show()
+    plt.savefig(saveas,bbox_inches='tight')
+    plt.close('all')
 
 def target_image(image,target,saveas='target_image.pdf'):
     # take useful targ_obj values; comes from source_cat, is the photutils for the galaxy object
@@ -267,7 +391,6 @@ def target_image(image,target,saveas='target_image.pdf'):
     
     # todo get r_eq formatted to show getting key error because of {eq}, similar include theta
     #plt.show()
-    print('saveas has multiple arguments?',saveas)
     plt.savefig(saveas,bbox_inches='tight')
     plt.close('all')
 

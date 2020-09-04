@@ -13,6 +13,7 @@ from matplotlib.patches import Circle
 import numpy as np
 import itertools
 import collections 
+from scipy.optimize import curve_fit
 
 import astropy
 from astropy.io import ascii,fits
@@ -765,6 +766,8 @@ def lco_pipe():
     ref_image = my_data['ref.fits']
     hdr = image.header
     groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
+    med,exptime = hdr['L1MEDIAN'],hdr['EXPTIME']
+    zp=skybr+2.5*np.log10(med/exptime/pixscale)
     print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2'.format(filename,groupid,L1fwhm,pixscale,skybr))
     print('\n')
 
@@ -798,10 +801,11 @@ def lco_pipe():
     target_boxes = target(image,targ_obj,ref=ref_image,diff=diff_image) 
     targ_obj,cuts,bkg_core,bkg_1,bkg_2 = target_boxes # unpacked
     cut_targ,cut_diff,cut_ref = cuts # unpack cuts around target source,diff,and ref
-    # make figures from cuts on target (without the plant just shows target gal and boxes)
-    lco_figures.target_image(image,target_boxes,saveas=pickle_to+'_target_sourceim.pdf')
-    lco_figures.target_image(diff_image,target_boxes,saveas=pickle_to+'_target_diffim.pdf')
-    lco_figures.target_image(ref_image,target_boxes,saveas=pickle_to+'_target_refim.pdf')
+    # make figures from cuts on target (without the plant just shows target gal and boxes of equivalent radius shifted along orientation)
+    # these figures unnecessary, were starting point for viewtaret that has replaced them and makes more sense 
+    #lco_figures.target_image(image,target_boxes,saveas=pickle_to+'_target_sourceim.pdf')
+    #lco_figures.target_image(diff_image,target_boxes,saveas=pickle_to+'_target_diffim.pdf')
+    #lco_figures.target_image(ref_image,target_boxes,saveas=pickle_to+'_target_refim.pdf')
 
     # measured psf is now going to be scaled to different magnitudes and planted in the difference image
     mags = np.arange(skybr-4.5,skybr+3,0.5) #zp ~ 23.5 # rough zp 
@@ -810,16 +814,55 @@ def lco_pipe():
     # the box plant wants a list of pixel coordinates, accessing from the target boxes here
     target_locations_orig = [bkg_core[0].center_original,bkg_1[0].center_original,bkg_2[0].center_original] # [0] so cut not patch
     target_locations_cutout = [bkg_core[0].center_cutout,bkg_1[0].center_cutout,bkg_2[0].center_cutout]
+    # planting on target centroid at many magnitudes, I am not using the two shifts really only interested to see core
+    # running detection repeatedly to determine efficiency
+    efficiencies = []
+    j = 0
     for mag in mags:
+        efficiencies.append([])
         # planting into difference image
         box_plantname = '{}_planted_targ_mag{}.fits'.format(pickle_to,str(mag))
-        box_planted_orig = plant(diff_image,epsf,source_catalog,hdr=hdr,mag=mag,location=target_locations_orig,zp=None,plantname=box_plantname)
+        box_planted_orig = plant(diff_image,epsf,source_catalog,hdr=hdr,mag=mag,location=[target_locations_orig[0]],zp=None,plantname=box_plantname)
         # unpack
         box_plant_im,box_pixels = box_planted_orig 
         # make target figures (similar to prev w source but now diff and plants)
-        lco_figures.target_image(box_plant_im,target_boxes,saveas=pickle_to+'_target_plantdiff_mag{}.pdf'.format(str(mag)))
-        
-    # lattice plant into the difference 
+        #lco_figures.target_image(box_plant_im,targ,saveas=pickle_to+'_target_plantdiff_mag{}.pdf'.format(str(mag)))
+        # get a pdf showing image,ref,diff,fakeplant for SN w this mag
+        lco_figures.view_targetplant(image,ref_image,diff_image,box_plant_im,target_boxes,zp,saveas=pickle_to+'targetplant_mag{}.pdf'.format(str(mag)))
+
+        j += 1
+        # The detection either works or doesn't for a plant there is no randomness in algorithm 
+        # i.e. the catalog returned for an image is the same for a given detection
+        # Therefor don't really need to do detection in range(0,N) but I do it twice anyways
+        for i in range(0,2):
+            # source properties of detected objs in fake image
+            print(j,i)
+            fakesource_cat = source_cat(box_plant_im)
+            fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
+            pickle.dump(fakecat,open(pickle_to+'_fakesource_cat{}.pkl'.format(str(i)),'wb'))
+
+            # detection efficiency  
+            tmp = detection_efficiency(box_planted_orig,fakesource_cat)
+            efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl = tmp
+            efficiencies[j-1].append(efficiency)
+            pickle.dump(tmp,open(pickle_to+'_detection_efficiency{}_mag{}.pkl'.format(str(i),str(mag)),'wb'))
+            print(efficiency,magfakes)
+            print('--------------------------------------------------------------')
+    avg_efficiencies=[]
+    for i in efficiencies:
+        efficiency = np.average(i)
+        print(efficiency)
+        avg_efficiencies.append(efficiency)
+    avg_efficiencies,mags=list(avg_efficiencies),list(mags)
+    avg_efficiencies.reverse()
+    mags.reverse()
+    m50 = np.interp(0.5,avg_efficiencies,mags)
+    print('m50 ~ {}'.format(m50))  
+    # make figures
+    lco_figures.detection_efficiency(mags,avg_efficiencies,m50,target_boxes,skybr,zp,saveas=pickle_to+'_target_detection_efficiency.pdf')
+
+    # lattice plant into the difference, a second way to do detection efficiency
+    mags = np.arange(skybr-4.5,skybr+3,0.5) # get mags back in order, zp ~ 23.5 # rough zp 
     locations = lattice(image)
     efficiencies = []
     for mag in mags:
@@ -853,7 +896,7 @@ def lco_pipe():
     print('m50 ~ {}'.format(m50))
 
     # make figures
-    lco_figures.detection_efficiency(mags,efficiencies,m50,saveas=pickle_to+'_detection_efficiency.pdf')
+    lco_figures.detection_efficiency(mags,efficiencies,m50,target_boxes,skybr,zp,saveas=pickle_to+'_detection_efficiency.pdf')
     lco_figures.lattice_planted(mags,m50,pickle_to=pickle_to,saveas=pickle_to+'_plants.pdf')
 
 if __name__=="__main__":
