@@ -10,6 +10,7 @@ import pickle
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.patches import Circle
+from matplotlib.colors import BoundaryNorm
 import numpy as np
 import itertools
 import collections 
@@ -304,6 +305,9 @@ def gaussian2d(epsf,hdr=None):
     img_epsf = photutils.psf.EPSFStar(image1.data,cutout_center=(x_mean,y_mean))
     # for example the residual of gaussian model with the epsf...
     resid = img_epsf.compute_residual_image(epsf)
+    # idk what's happening with compute_residual_image but it isn't straight-forward subtraction of img_epsf - epsf
+    # some parameter about the scale for registered epsf is being used, where it assumes img_epsf is a star, I really just can use a straight sub of the gauss model fit - epsf
+    resid = img_epsf.data - epsf.data 
     return gaussian,levels,xctr_vals,yctr_vals,image1,img_epsf,resid
     #return image1
     """
@@ -752,12 +756,12 @@ def lco_pipe():
     field = all_fields[field_key]
     # which date folder are we in and which field was this slurm idx job 
 
-    # all the reduced fits images needed 
+    # all the fits images needed, the trims, diffs, and ref 
     my_data = get_data(field)
 
     # each field should have a folder source_im (along w dia_out and dia_trim) 
-    # in it is the image you want to do this for
-    # ie the one that psf is measured on and SNe planted to
+    # in source_im is the image you want to do this for
+    # ie the one that psf is measured on trim and SNe planted to diff of
     source_im = glob.glob(field+'/source_im/*fits')[0]
     source_output = os.path.join(field,'source_im/output') # where will be stick results of pipeline 
     filename=source_im.split('/')[-1]
@@ -768,11 +772,10 @@ def lco_pipe():
     groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
     med,exptime = hdr['L1MEDIAN'],hdr['EXPTIME']
     zp=skybr+2.5*np.log10(med/exptime/pixscale)
-    print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2'.format(filename,groupid,L1fwhm,pixscale,skybr))
+    print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2; zp ~ {}'.format(filename,groupid,L1fwhm,pixscale,skybr,zp))
     print('\n')
 
     pickle_to = source_output + '/' + filename[:-5] # -5 get rid of .fits
-    #print(pickle_to)
     
     # photutils source properties to detect objs in image
     source_catalog = source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001,targ_coord=None)

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams.update({'font.size': 30})
 from matplotlib.patches import Circle
+from matplotlib.colors import BoundaryNorm
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -40,69 +41,87 @@ warnings.filterwarnings('ignore')
 import lco_fakeSNpipeline
 
 def psf_and_gauss(epsf,epsf_gaussian,saveas='lco_psf.pdf'):
-	# take a look at the ePSF image built from stack and a fitted gaussian 
-	fit_gaussian,levels,xctr_vals,yctr_vals,image1,img_epsf,resid = epsf_gaussian # unpacked... levels list amplitude - sigma, ctr vals are gauss model sliced, image1 is array of values from gaussian fit in shape of epsf, img_epsf is epsf instance of it, resid is gauss - epsf 
-	constant,amplitude,x_mean,y_mean,x_stddev,y_stddev,theta=fit_gaussian.parameters
-	matplotlib.rcParams.update({'font.size': 30})
+    # take a look at the ePSF image built from stack and a fitted gaussian 
+    fit_gaussian,levels,xctr_vals,yctr_vals,image1,img_epsf,resid = epsf_gaussian # unpacked... levels list amplitude - sigma, ctr vals are gauss model sliced, image1 is array of values from gaussian fit in shape of epsf, img_epsf is epsf instance of it, resid is gauss - epsf 
+    constant,amplitude,x_mean,y_mean,x_stddev,y_stddev,theta=fit_gaussian.parameters
+    matplotlib.rcParams.update({'font.size': 30})
 
-	fig, ax = plt.subplots(2,2,figsize=(7.5, 7.5),gridspec_kw={'width_ratios': [3, 1],'height_ratios':[3,1]})
-	#fig.add_subplot()
-	#im1 = ax[0][0].imshow(zscale(epsf.data),cmap='gray')
-	# works better with a lognormalization stretch to data 
-	norm = simple_norm(epsf.data, 'log')
-	im1 = ax[0][0].imshow(epsf.data,norm=norm,vmin=0,cmap='viridis')
-	# Adding the colorbar
-	cbaxes = fig.add_axes([-0.3, 0.1, 0.03, 0.8])  # This is the position for the colorbar
-	ticks = [norm.vmax,norm.vmax/10,norm.vmax/100]
-	ticks.append(norm.vmin)
-	#print(ticks)
-	cb = plt.colorbar(im1, cax = cbaxes,ticks=ticks,format='%.1e')
-	#plt.colorbar(im1,ax=ax[0][0])
+    fig, ax = plt.subplots(2,2,figsize=(7.5, 7.5),gridspec_kw={'width_ratios': [3, 1],'height_ratios':[3,1]})
+    #fig.add_subplot()
+    #im1 = ax[0][0].imshow(zscale(epsf.data),cmap='gray')
+    # works better with a lognormalization stretch to data 
+    norm = simple_norm(epsf.data, 'log')
+    im1 = ax[0][0].imshow(epsf.data,norm=norm,vmin=np.min(epsf.data),cmap='viridis')
+    # Adding the colorbar
+    cbaxes = fig.add_axes([-0.3, 0.1, 0.03, 0.8])  # This is the position for the colorbar
+    ticks = [norm.vmax,norm.vmax/10,norm.vmax/100]
+    ticks.append(norm.vmin)
+    #print(ticks)
+    cb = plt.colorbar(im1, cax = cbaxes,ticks=ticks,format='%.1e')
+    #plt.colorbar(im1,ax=ax[0][0])
 
-	tmp=np.arange(0,epsf.shape[0])
-	# vertical slice along ctr ... the x=0 gaussian fit values of epsf
-	ax[1][0].plot(tmp,yctr_vals)
-	ax[1][0].text(0.01, .01, r'$\sigma_x\sim{:.1f}$'.format(abs(x_stddev)), fontsize=25,rotation=0)
-	# horizontal slice ... y=0 gaussian fit vals
-	ax[0][1].plot(xctr_vals,tmp)
-	ax[0][1].text(0.01, 45, r'$\sigma_y\sim{:.1f}$'.format(abs(y_stddev)), fontsize=25,rotation=-90)
+    tmp=np.arange(0,epsf.shape[0])
+    # vertical slices along ctr i.e. x = 0... 
+    # gaussian fit values of epsf
+    ax[1][0].plot(tmp,yctr_vals)
+    # epsf
+    epsf.shape
+    row_idx = np.array([i for i in range(epsf.shape[0])])
+    col_idx = np.array([int(epsf.shape[0]/2)])
+    epsf_ctrx = epsf.data[row_idx[:, None], col_idx]
+    ax[1][0].scatter(row_idx,epsf_ctrx)
+    ax[1][0].text(0.01, .01, r'$\sigma_x\sim{:.1f}$'.format(abs(x_stddev)), fontsize=25,rotation=0)
+    # horizontal slice ... y=0 gaussian fit vals
+    ax[0][1].plot(xctr_vals,tmp)
+    row_idx = np.array([int(epsf.shape[0]/2)])
+    col_idx = np.array([i for i in range(epsf.shape[0])])
+    epsf_ctry = epsf.data[row_idx[:, None], col_idx]
+    ax[0][1].scatter(epsf_ctry,col_idx)
+    ax[0][1].text(0.01, 45, r'$\sigma_y\sim{:.1f}$'.format(abs(y_stddev)), fontsize=25,rotation=-90)
 
-	#ax.set_xlabel('',fontsize=45)
-	#ax[0][0].set_xticks([])
-	#ax[0][0].set_yticks([])
-	ax[1][0].set_xticks([])
-	ax[1][0].set_yticks([])
-	ax[0][1].set_xticks([])
-	ax[0][1].set_yticks([])
-	#ax2 = ax[0].twinx()
-	"""
-	# contours of the epsf for levels 1,2,and3 sigma (from np.std(data)) below gaussian fit amplitude
-	ax[1][1].contour(epsf.data,levels=levels)
-	ax[1][1].set_xlim(23,27)
-	ax[1][1].set_ylim(23,27)
-	#ax[1][1].set_xticks([15,35])
-	#ax[1][1].set_yticks([15,35])
-	ax[1][1].yaxis.tick_right()
-	"""
-	# residual, gaussian model minus the effective psf it was fitting
-	med=np.median(resid)
-	std=np.std(resid)
-	shift=np.median(resid)+3*np.std(resid)
-	resid += shift # translate everything up by 3sigma above median
-	norm=simple_norm(resid,'log')
-	print('Residual median {}, std {} , shift {}'.format(med,std,shift))
-	print('lognorm on shifted residual: norm.vmin {}, norm.vmax {}'.format(norm.vmin,norm.vmax))
-	# use vmin of 0, the 3 sigma shift upwards should have the meaningful negative values above zero
-	vmin,vmax=0,norm.vmax
-	print('vmin,vmax used in resid lognorm imshow',vmin,vmax)
-	im2 = ax[1][1].imshow(resid,origin='lower',cmap='viridis',norm=norm,vmin=vmin,vmax=vmax)
-	ticks = [norm.vmin,norm.vmax,shift]
+    #ax.set_xlabel('',fontsize=45)
+    #ax[0][0].set_xticks([])
+    #ax[0][0].set_yticks([])
+    ax[1][0].set_xticks([])
+    ax[1][0].set_yticks([])
+    ax[0][1].set_xticks([])
+    ax[0][1].set_yticks([])
+    #ax2 = ax[0].twinx()
+    """
+    # contours of the epsf for levels 1,2,and3 sigma (from np.std(data)) below gaussian fit amplitude
+    ax[1][1].contour(epsf.data,levels=levels)
+    ax[1][1].set_xlim(23,27)
+    ax[1][1].set_ylim(23,27)
+    #ax[1][1].set_xticks([15,35])
+    #ax[1][1].set_yticks([15,35])
+    ax[1][1].yaxis.tick_right()
+    """
+    med=np.median(resid)
+    std=np.std(resid)
+    # define the colormap
+    cmap = plt.get_cmap('YlGnBu')
+    # extract all colors from the map
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    # create the new map
+    cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
 
-	cbaxes = fig.add_axes([1, 0.1, 0.03, 0.2])  # This is the position for the colorbar
-	cb = plt.colorbar(im2,cax=cbaxes,ticks=ticks)
+    # define the bins and normalize and forcing 0 to be part of the colorbar!
+    maximnorm = norm.vmax # the amplitude of the psf from normalization above, want to see residual relative to this value
+    bounds = np.arange(med-5*std,med+5*std,std/10)
+    #bounds = np.arange(-maximnorm/10,maximnorm/10,std/10)
+    idx=np.searchsorted(bounds,0)
+    bounds=np.insert(bounds,idx,0)
+    norm = BoundaryNorm(bounds, cmap.N,'log') 
+    im2 = ax[1][1].imshow(resid,origin='lower',cmap=cmap,norm=norm) # ,vmin=vmin,vmax=vmax
+    # zoom in to region 3sigma around ctr
+    ax[1][1].set_xlim(x_mean-3*x_stddev,x_mean+3*x_stddev)
+    ax[1][1].set_ylim(y_mean-3*y_stddev,y_mean+3*y_stddev)
+    ticks = [norm.vmin,norm.vmax,0]
 
-	plt.savefig(saveas,bbox_inches='tight')
+    cbaxes = fig.add_axes([1, 0.1, 0.03, 0.2])  # This is the position for the colorbar
+    cb = plt.colorbar(im2,cax=cbaxes,ticks=ticks,format='%.1e') 
 
+    plt.savefig(saveas,bbox_inches='tight')
 
 def used_stars(fitted_stars,saveas='lco_stars.pdf'):
 	# can either show the 'good' stars ie those used to build the epsf, or using i.compute_residual_image(epsf) to show how well the epsf fit each
