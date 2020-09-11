@@ -107,8 +107,7 @@ def psf_and_gauss(epsf,epsf_gaussian,saveas='lco_psf.pdf'):
 
     # define the bins and normalize and forcing 0 to be part of the colorbar!
     maximnorm = norm.vmax # the amplitude of the psf from normalization above, want to see residual relative to this value
-    bounds = np.arange(med-5*std,med+5*std,std/10)
-    #bounds = np.arange(-maximnorm/10,maximnorm/10,std/10)
+    bounds = np.arange(np.min(resid),np.max(resid),std/10)
     idx=np.searchsorted(bounds,0)
     bounds=np.insert(bounds,idx,0)
     norm = BoundaryNorm(bounds, cmap.N,'log') 
@@ -140,7 +139,7 @@ def efficiency(m,m50,alpha):
     #https://arxiv.org/pdf/1509.06574.pdf, strolger 
     return (1+np.exp(alpha*(m-m50)))**-1
 
-def detection_efficiency(mags,efficiencies,m50,targ,skybr,zp,saveas='lco_detection_efficiency.pdf'):
+def detection_efficiency(mags,efficiencies,m50,targ,skybr,zp,glsn=None,saveas='lco_detection_efficiency.pdf'):
     matplotlib.rcParams.update({'font.size': 30})
     fig, ax = plt.subplots(1,1,figsize=(5, 5))
     #fig.add_subplot()
@@ -168,6 +167,10 @@ def detection_efficiency(mags,efficiencies,m50,targ,skybr,zp,saveas='lco_detecti
     e = efficiency(mags,m50,alpha)
     plt.plot(mags,e)
     plt.vlines(m50,0,1,linestyle='--',color='black',label=r'm50 ~ {:.2f}, $\alpha$ ~ {:.1f}'.format(m50,alpha))
+    if glsn:
+        # predicted lensing mag applied to peak Ia for the strong lens
+        pkIa = glsn['Peak Apparent Magnitude'][0]        
+        plt.vlines(pkIa,0,1,linestyle='-',color='red',label=r'pkIa ~ {:.2f}'.format(pkIa))
     plt.legend(bbox_to_anchor=(1.5,-0.25))
     plt.savefig(saveas,bbox_inches='tight')
 

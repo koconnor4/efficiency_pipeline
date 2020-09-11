@@ -758,6 +758,8 @@ def lco_pipe():
 
     # all the fits images needed, the trims, diffs, and ref 
     my_data = get_data(field)
+    # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
+    glsn = ascii.read('peakGLSN.csv')
 
     # each field should have a folder source_im (along w dia_out and dia_trim) 
     # in source_im is the image you want to do this for
@@ -772,13 +774,17 @@ def lco_pipe():
     groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
     med,exptime = hdr['L1MEDIAN'],hdr['EXPTIME']
     zp=skybr+2.5*np.log10(med/exptime/pixscale)
+    glsnID = glsn[glsn['Source ID'] == groupid] # idx the glsn table using id 
     print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2; zp ~ {}'.format(filename,groupid,L1fwhm,pixscale,skybr,zp))
+    print('glsn ~ {}'.format(glsnID))
     print('\n')
 
     pickle_to = source_output + '/' + filename[:-5] # -5 get rid of .fits
     
     # photutils source properties to detect objs in image
-    source_catalog = source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001,targ_coord=None)
+    nsigma,kernel_size,npixels,deblend,contrast,targ_coord = 5,(3,3),int(np.round(L1fwhm/pixscale)),False,.001,None
+    print('Source Catalog is a photutils source_properties using nsigma ~ {} (detection threshold above img bkg), gaussian kernel sized ~ {} pix, npixels ~ {} (connected pixels needed to be considered source), deblend ~ {} w contrast {}'.format(nsigma,kernel_size,npixels,deblend,contrast))
+    source_catalog = source_cat(image,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
     cat,image,threshold,segm,targ_obj = source_catalog # unpacked to make a little clearer
     pickle.dump(cat,open(pickle_to + '_source_cat.pkl','wb'))
 
@@ -789,7 +795,7 @@ def lco_pipe():
     extracted_stars = stars(results)
     good_stars,image = extracted_stars # unpacked
     # use extracted stars to build epsf
-    EPSF = ePSF(extracted_stars)
+    EPSF = ePSF(extracted_stars,oversampling=2)
     epsf,fitted_stars = EPSF # unpacked
     pickle.dump(EPSF,open(pickle_to+'_epsf.pkl','wb'))
     # fit 2d gaussian to the epsf, see how 'non-gaussian' the actual psf is
@@ -804,11 +810,6 @@ def lco_pipe():
     target_boxes = target(image,targ_obj,ref=ref_image,diff=diff_image) 
     targ_obj,cuts,bkg_core,bkg_1,bkg_2 = target_boxes # unpacked
     cut_targ,cut_diff,cut_ref = cuts # unpack cuts around target source,diff,and ref
-    # make figures from cuts on target (without the plant just shows target gal and boxes of equivalent radius shifted along orientation)
-    # these figures unnecessary, were starting point for viewtaret that has replaced them and makes more sense 
-    #lco_figures.target_image(image,target_boxes,saveas=pickle_to+'_target_sourceim.pdf')
-    #lco_figures.target_image(diff_image,target_boxes,saveas=pickle_to+'_target_diffim.pdf')
-    #lco_figures.target_image(ref_image,target_boxes,saveas=pickle_to+'_target_refim.pdf')
 
     # measured psf is now going to be scaled to different magnitudes and planted in the difference image
     mags = np.arange(skybr-4.5,skybr+3,0.5) #zp ~ 23.5 # rough zp 
@@ -840,7 +841,7 @@ def lco_pipe():
         for i in range(0,2):
             # source properties of detected objs in fake image
             print(j,i)
-            fakesource_cat = source_cat(box_plant_im)
+            fakesource_cat = source_cat(box_plant_im,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
             fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
             pickle.dump(fakecat,open(pickle_to+'_fakesource_cat{}.pkl'.format(str(i)),'wb'))
 
@@ -862,7 +863,7 @@ def lco_pipe():
     m50 = np.interp(0.5,avg_efficiencies,mags)
     print('m50 ~ {}'.format(m50))  
     # make figures
-    lco_figures.detection_efficiency(mags,avg_efficiencies,m50,target_boxes,skybr,zp,saveas=pickle_to+'_target_detection_efficiency.pdf')
+    lco_figures.detection_efficiency(mags,avg_efficiencies,m50,target_boxes,skybr,zp,glsn=glsnID,saveas=pickle_to+'_target_detection_efficiency.pdf')
 
     # lattice plant into the difference, a second way to do detection efficiency
     mags = np.arange(skybr-4.5,skybr+3,0.5) # get mags back in order, zp ~ 23.5 # rough zp 
@@ -875,7 +876,7 @@ def lco_pipe():
         plant_im,pixels = planted # unpack
 
         # source properties of detected objs in fake image
-        fakesource_cat = source_cat(plant_im)
+        fakesource_cat = source_cat(plant_im,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
         fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
         pickle.dump(fakecat,open(pickle_to+'_fakesource_cat.pkl','wb'))
 
@@ -899,7 +900,7 @@ def lco_pipe():
     print('m50 ~ {}'.format(m50))
 
     # make figures
-    lco_figures.detection_efficiency(mags,efficiencies,m50,target_boxes,skybr,zp,saveas=pickle_to+'_detection_efficiency.pdf')
+    lco_figures.detection_efficiency(mags,efficiencies,m50,target_boxes,skybr,zp,glsn=glsnID,saveas=pickle_to+'_detection_efficiency.pdf')
     lco_figures.lattice_planted(mags,m50,pickle_to=pickle_to,saveas=pickle_to+'_plants.pdf')
 
 if __name__=="__main__":
