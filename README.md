@@ -2,7 +2,7 @@ Welcome to efficiency_pipeline!
 =========================
 
 [![Documentation Status](https://readthedocs.org/projects/efficiency-pipeline/badge/?version=latest)](http://efficiency-pipeline.readthedocs.org/en/latest/?badge=latest)
-[![PyPI](https://img.shields.io/pypi/v/codetopackage.svg?style=flat-square)](https://pypi.python.org/pypi/efficiency-pipeline)
+[![PyPI](https://img.shields.io/pypi/v/efficiency-pipeline.svg?style=flat-square)](https://pypi.python.org/pypi/efficiency-pipeline)
 
 Documentation for this package is hosted on [ReadTheDocs](https://efficiency-pipeline.readthedocs.io/en/latest/). This package is under active use and development, so please post GitHub issues if anything arises (bug or feature request). 
 
