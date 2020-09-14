@@ -1,0 +1,11 @@
+README.md
+setup.py
+efficiency_pipeline/__init__.py
+efficiency_pipeline/lco_fakeSNpipeline.py
+efficiency_pipeline/lco_figures.py
+efficiency_pipeline/test_efficiency_pipeline.py
+efficiency_pipeline.egg-info/PKG-INFO
+efficiency_pipeline.egg-info/SOURCES.txt
+efficiency_pipeline.egg-info/dependency_links.txt
+efficiency_pipeline.egg-info/requires.txt
+efficiency_pipeline.egg-info/top_level.txt
