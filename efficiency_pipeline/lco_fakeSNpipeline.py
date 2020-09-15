@@ -49,15 +49,18 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def get_data(path):
-    my_data = {} 
     """
-    # shouldn't be any images directly in the folder path to field this is used for
-    # should be tucked in dirs like dia_out, dia_trim, source_im
+    helper function that gets you a dictionary that uses filenames as keys to fits 
+    assumes images tucked in dirs like dia_out, dia_trim, source_im
+    path argument should be string to where you are working
+    if images not tucked in the dirs ... can uncomment these
     ims=glob.glob('*fits')
     for i in range(len(ims)):
         filename = ims[i].split('/')[-1]
         my_data[filename] = fits.open(ims[i])[0]
     """
+
+    my_data = {} 
     # this source im is a dir that you should make for each field with the image you want to use
     # ie will be the one that psf measured on and planting into
     SOURCE_IM=glob.glob(os.path.join(path,'source_im/*fits'))
@@ -76,6 +79,11 @@ def get_data(path):
     return my_data
 
 def gaia_results(image):
+    """
+    epsf helper function uses Gaia query to get stars in image
+    image argument is the LCO fits file  
+    """
+
     # image wcs and frame, for conversions pixels/skycoord
     wcs,frame=WCS(image.header),image.header['RADESYS'].lower()
     # coord of strong lensing galaxy
@@ -93,6 +101,15 @@ def gaia_results(image):
     return r,image
 
 def stars(results,Nbrightest=None):
+    """
+    epsf helper function extracts good stars from image and turns them into photutil epsf star objects
+    good ~ well measured isolated stars:
+    bbox of 25 pixels is used for extraction, any overlapping stars are removed
+    gaia rp s/n < 100 removed
+    any stars with flux value > saturation or non-lin of image are removed 
+    results argument is the gaia_results
+    """
+
     # stars are extracted from image to be ready for use in determine ePSF
     # note ref.fits doesn't have saturate and maxlin available the image should be just one of the trims
 
@@ -219,6 +236,14 @@ def stars(results,Nbrightest=None):
     return good_stars,image
 
 def ePSF(stars,name='psf.fits',oversampling=2):
+    """
+    function that builds an effective point spread function using an image's stars using photutils
+    the effective point spread function representing truth more carefully than a 2d gaussian  
+    minimal oversampling 2 is default since LCO is already oversampling the PSFs:
+    typical rp_fwhm ~ 2 arcsec and pixscale ~ 0.4 arcsec
+    stars argument is stars helper fcn
+    """
+
     # using all the available Gaia results which are below non-linearity/saturation to build an effective PSF 
 
     # unpack the stars results into the good_stars and image 
@@ -249,6 +274,13 @@ def ePSF(stars,name='psf.fits',oversampling=2):
 from photutils.datasets import make_gaussian_sources_image
 
 def gaussian2d(epsf,hdr=None):
+    """
+    function to fit 2d gaussian to epsf
+    photutils fit 2d gaussian has 7 parameters (constant,amplitude,x_mean,y_mean,x_stddev,y_stddev,theta) 
+    epsf argument is the photutils epsf from epsf fcn
+    hdr optional argument will compare the L1fwhm available in reduced image to the fit  
+    """
+
     # use photutils 2d gaussian fit on the epsf
     gaussian = photutils.centroids.fit_2dgaussian(epsf.data)
     print('gaussian fit to epsf:')
@@ -320,10 +352,16 @@ def gaussian2d(epsf,hdr=None):
 
 def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast=.001,targ_coord=None):
     """
-    the image should be fits.open('trim.fits'), is trimmed/aligned properly w reference/differences
-    for some reason reference doesn't have the catalog ra of the target strong lensing galaxy in header
-    will get a cat of properties for detected sources
+    function that gives catalog of detected objects in fits image with photometry based measurements 
+    arguments:
+    image ~ the fits file that will be searched
+    nsigma ~ what is considered 'detectable' in photutils detect_threshold, which does sigma clipped stats to get image bkg
+    kernel_size ~ pixel size of gaussian kernel convolved with data to smooth image objs 
+    npixels ~ number of pixels which must be connected above nsigma threshold (connectivity=8 along edges or corner)
+    if very crowded...
+    deblend will check detected objs for local peaks with contrast (percentage of obj total flux) > .001
     """
+
     # to be able to translate from ra/dec <--> pixels on image
     wcs,frame = WCS(image.header),image.header['RADESYS'].lower()
     hdr = image.header
@@ -406,6 +444,12 @@ def source_cat(image,nsigma=2,kernel_size=(3,3),npixels=5,deblend=False,contrast
     return cat,image,threshold,segm,targ_obj
 
 def target(image,targ_obj,ref=None,diff=None):
+    """
+    helper function for the target detection efficiency
+    gives cutouts on images (trim,ref,diff) around galaxy-galaxy strong lens
+    checks source catalog to make sure it is one of image's detected objects otherwise will get properties from reference
+    """
+
     if len(targ_obj) == 0:
         # the target isnt detected in image by my source_cat (photutils)...likely bad skymag bkg
         # going to use ref.fits to cut around the target and extract the parameters from these
@@ -491,12 +535,20 @@ def target(image,targ_obj,ref=None,diff=None):
 
 def plant(image,psf,source_cat,hdr=None,mag=None,location=None,zp=None,plantname='planted.fits'):
     """
-    the image should be the fits.open('difference.fits'), will add SN directly to here
-    psf should be the epsf_builder(stars), ie a previous step is needed to check that have epsf which looks good
-    source_cat is the catalog,targ_obj (strong lens galaxy), and segmentation image from photutils on image
-    location should be a Skycoord(ra,dec) or if left as None will use the targ_obj strong lensing gal to place
-    mag,zp (TODO need to know how to get proper zp so that scaling ePSF to correct mag; ePSF just means flux=1)
+    helper function for detection efficiency plants SNe (the scaled epsf) into an image to be detected
+    returns the planted image data and creates fits image using plantname arg 
+    image argument should be difference fits, i.e. want to detect plants on difference 
+    psf argument from epsf fcn
+    source_cat argument from source_cat fcn  
+    zp argument left as None will be determined using hdr vals like zp=skybr+2.5*np.log10(L1med/exptime/pixscale)
+    mag argument scales epsf (the SN) like mu = 10**((mag-zp)/-2.5)*exptime*pixscale   
+    location ~ where will plant is flexible:
+    Skycoord(ra,dec)
+    tuple for grid see lattice helper function 
+    list for galaxy-galaxy strong lens target  see target helper function
+    None will use hdr val
     """
+
     # unpack the source_cat so can use the targ_obj to place SN later if not given a location explicitly
     cat,orig_image,threshold,segm,targ_obj=source_cat # orig_image ~ meaning that pointing which source cat was run on not a diff
     
@@ -642,6 +694,12 @@ def plant(image,psf,source_cat,hdr=None,mag=None,location=None,zp=None,plantname
         return plant_im 
 
 def lattice(image):
+    """
+    grid detection efficiency helper function gives evenly spaced skycoord and pixel locations
+    spacing is 100 pixels, limited to 100 pixels away from edge
+    image argument is the fits file
+    """
+
     hdr = image.header
     wcs,frame=WCS(hdr),hdr['RADESYS'].lower()
     # have single 4kx4k chip from wide field instrument
@@ -660,6 +718,14 @@ def lattice(image):
     return locations,pixels
 
 def detection_efficiency(plant,cat):
+    """
+    The detection efficiency NSN detected to NSN planted measurement
+    determines true and false detections as SN plant within 5 pixel radius of detected location
+    breaks up true into repeat and single detections i.e. which plants were detected multiple times at slightly different loc
+    plant argument from plant helper function has the image w plants and where they are located  
+    cat argument from source_cat function applied to image w plants i.e. you need to do the detection on plant im
+    """
+
     # provide the plant and detection cat run to find efficiency
     # unpack the plant (the image and locations)
     plant_im,pixels=plant 
