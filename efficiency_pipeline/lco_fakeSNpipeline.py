@@ -808,12 +808,22 @@ def detection_efficiency(plant,cat):
     print('Detection efficiency (N_plants_detected/N_plants) ~ {} on mag ~ {} SNe'.format(efficiency,magfakes))
     return efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl
 
-def lco_pipe():
+def lco_pipe(lco_path=None,date_key='sbatch',field_key='sbatch'):
+    """
+    pipeline that applies the epsf measurement, fake SN planting at different mags/locations, and detection efficiency measurement for groups of images.
+    the lco_path arg should be str to dir with the data
+    assumes data is in dirs like xx.xx date directory with field dirs that each has dirs dia_in/out/trim and source_im 
+    figures/images will be made and stored in an output dir inside the source_ims
+    """
+
     #print(sys.argv[0]) # the name of this command script  
-    date_key = str(sys.argv[1]) # easy enough to change sbatch to get xx.xx date
-    field_key = int(sys.argv[2]) # slurm array idx in sbatch that will be used to do the different fields 
+    if date_key == 'sbatch':
+        date_key = str(sys.argv[1]) # first sbatch arg is to get xx.xx date
+    if field_key == 'sbatch':
+        field_key = int(sys.argv[2]) # slurm array idx in sbatch that is of length of the number of fields for date 
     # lco_path ~ current working dir with scripts and sub-dirs of data  
-    lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
+    if lco_path == None:
+        lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
     # all the dates w lco data in the lco_path 
     all_dates = [x for x in glob.glob(lco_path+'/*') if os.path.isdir(x)]
     # your batch should have xx.xx date given so script knows which set of fields you want to do 
