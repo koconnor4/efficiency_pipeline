@@ -1,0 +1,23 @@
+
+
+Examples using ``efficiency_pipeline.lco_pipe``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Basic usage of the efficiency_pipeline package.">
+
+.. only:: html
+
+ .. figure:: /examples/images/thumb/sphx_glr_plot_package_thumb.png
+     :alt: Basic Functionality
+
+     :ref:`sphx_glr_examples_plot_package.py`
+
+.. raw:: html
+
+    </div>
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_plot_package.py`

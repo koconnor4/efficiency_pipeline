@@ -5,5 +5,4 @@ astropy
 astroquery
 photutils
 requests
-optparse
 pytest-astropy
