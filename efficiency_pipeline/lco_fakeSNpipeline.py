@@ -42,7 +42,7 @@ from photutils import source_properties, EllipticalAperture
 from photutils import BoundingBox
 from photutils import Background2D, MedianBackground
 
-from .lco_figures import *
+from lco_figures import *
 
 # Suppress warnings. Relevant for astroquery. Comment this out if you wish to see the warning messages
 import warnings
@@ -808,27 +808,16 @@ def detection_efficiency(plant,cat):
     print('Detection efficiency (N_plants_detected/N_plants) ~ {} on mag ~ {} SNe'.format(efficiency,magfakes))
     return efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl
 
-
-
-
-
-def lco_pipe_ex(lco_path=None,date_key='08.17',field_key=0):
+def lco_pipe_ex(path='/work/oconnorf/efficiency_pipeline/efficiency_pipeline/lco_pipe_example/sdssj2309-0039'):
     """
-    Giving snapshot of important results for test case of image going through the pipeline.
-    Not actually running functions just loading results from previous run.     
+    test case image going through the pipeline.
     """
-    if lco_path == None:
-        lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
-    date_path = os.path.join(lco_path,date_key+'/*')
-    all_fields = [x for x in glob.glob(date_path) if os.path.isdir(x)]
-    field = all_fields[field_key]
-    # all the fits images needed, the trims, diffs, and ref 
-    my_data = get_data(field)
+    my_data = get_data(path)
     # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
-    glsn = ascii.read(os.path.join(lco_path,'peakGLSN.csv'))
+    glsn = ascii.read(os.path.join(path,'peakGLSN.csv'))
 
-    source_im = glob.glob(field+'/source_im/*fits')[0]
-    source_output = os.path.join(field,'source_im/output') # where will be stick results of pipeline 
+    source_im = glob.glob(path+'/source_im/*fits')[0]
+    source_output = os.path.join(path,'source_im/output') # where will be stick results of pipeline 
     filename=source_im.split('/')[-1]
     image = my_data[filename]
     diff_image = my_data['d_'+filename]
@@ -857,55 +846,56 @@ def lco_pipe_ex(lco_path=None,date_key='08.17',field_key=0):
     gde = pickle_to+'_detection_efficiency.pdf'
     plants = pickle_to+'_plants.pdf'
 
-
-def lco_pipe(lco_path=None,date_key='sbatch',field_key='sbatch'):
+def lco_pipe(data=None,lco_path=None,date_key='sbatch',field_key='sbatch'):
     """
     pipeline that applies the epsf measurement, fake SN planting at different mags/locations, and detection efficiency measurement for groups of images.
     the lco_path arg should be str to dir with the data
     assumes data is in dirs like xx.xx date directory with field dirs that each has dirs dia_in/out/trim and source_im 
     figures/images will be made and stored in an output dir inside the source_ims
     """
+    if data == None:
+        # assumes you haven't provided all of this data needed to run the pipeline
 
-    #print(sys.argv[0]) # the name of this command script  
-    if date_key == 'sbatch':
-        date_key = str(sys.argv[1]) # first sbatch arg is to get xx.xx date
-    if field_key == 'sbatch':
-        field_key = int(sys.argv[2]) # slurm array idx in sbatch that is of length of the number of fields for date 
-    # lco_path ~ current working dir with scripts and sub-dirs of data  
-    if lco_path == None:
-        lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
-    # all the dates w lco data in the lco_path 
-    all_dates = [x for x in glob.glob(lco_path+'/*') if os.path.isdir(x)]
-    # your batch should have xx.xx date given so script knows which set of fields you want to do 
-    date_path = os.path.join(lco_path,date_key+'/*')
-    all_fields = [x for x in glob.glob(date_path) if os.path.isdir(x)]
-    field = all_fields[field_key]
-    # which date folder are we in and which field was this slurm idx job 
+        #print(sys.argv[0]) # the name of this command script  
+        if date_key == 'sbatch':
+            date_key = str(sys.argv[1]) # first sbatch arg is to get xx.xx date
+        if field_key == 'sbatch':
+            field_key = int(sys.argv[2]) # slurm array idx in sbatch that is of length of the number of fields for date 
+        # lco_path ~ current working dir with scripts and sub-dirs of data  
+        if lco_path == None:
+            lco_path = '/work/oconnorf/efficiency_pipeline/lco/'
+        # all the dates w lco data in the lco_path 
+        all_dates = [x for x in glob.glob(lco_path+'/*') if os.path.isdir(x)]
+        # your batch should have xx.xx date given so script knows which set of fields you want to do 
+        date_path = os.path.join(lco_path,date_key+'/*')
+        all_fields = [x for x in glob.glob(date_path) if os.path.isdir(x)]
+        field = all_fields[field_key]
+        # which date folder are we in and which field was this slurm idx job 
 
-    # all the fits images needed, the trims, diffs, and ref 
-    my_data = get_data(field)
-    # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
-    glsn = ascii.read(os.path.join(lco_path,'peakGLSN.csv'))
+        # all the fits images needed, the trims, diffs, and ref 
+        my_data = get_data(field)
+        # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
+        glsn = ascii.read(os.path.join(lco_path,'peakGLSN.csv'))
 
-    # each field should have a folder source_im (along w dia_out and dia_trim) 
-    # in source_im is the image you want to do this for
-    # ie the one that psf is measured on trim and SNe planted to diff of
-    source_im = glob.glob(field+'/source_im/*fits')[0]
-    source_output = os.path.join(field,'source_im/output') # where will be stick results of pipeline 
-    filename=source_im.split('/')[-1]
-    image = my_data[filename]
-    diff_image = my_data['d_'+filename]
-    ref_image = my_data['ref.fits']
-    hdr = image.header
-    groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
-    med,exptime = hdr['L1MEDIAN'],hdr['EXPTIME']
-    zp=skybr+2.5*np.log10(med/exptime/pixscale)
-    glsnID = glsn[glsn['Source ID'] == groupid] # idx the glsn table using id 
-    print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2; zp ~ {}'.format(filename,groupid,L1fwhm,pixscale,skybr,zp))
-    print('glsn ~ {}'.format(glsnID))
-    print('\n')
+        # each field should have a folder source_im (along w dia_out and dia_trim) 
+        # in source_im is the image you want to do this for
+        # ie the one that psf is measured on trim and SNe planted to diff of
+        source_im = glob.glob(field+'/source_im/*fits')[0]
+        source_output = os.path.join(field,'source_im/output') # where will be stick results of pipeline 
+        filename=source_im.split('/')[-1]
+        image = my_data[filename]
+        diff_image = my_data['d_'+filename]
+        ref_image = my_data['ref.fits']
+        hdr = image.header
+        groupid,L1fwhm,pixscale,skybr = hdr['GROUPID'],hdr['L1fwhm'],hdr['pixscale'],hdr['WMSSKYBR'] # pixels, arcsec/pixels,mag/arcsec^2
+        med,exptime = hdr['L1MEDIAN'],hdr['EXPTIME']
+        zp=skybr+2.5*np.log10(med/exptime/pixscale)
+        glsnID = glsn[glsn['Source ID'] == groupid] # idx the glsn table using id 
+        print('filename ~ {} (groupid {}) has L1fwhm ~ {} pixels, pixscale ~ {} arcsec/pixel, and skybr {} mag/arcsec^2; zp ~ {}'.format(filename,groupid,L1fwhm,pixscale,skybr,zp))
+        print('glsn ~ {}'.format(glsnID))
+        print('\n')
 
-    pickle_to = source_output + '/' + filename[:-5] # -5 get rid of .fits
+        pickle_to = source_output + '/' + filename[:-5] # -5 get rid of .fits
     
     # photutils source properties to detect objs in image
     nsigma,kernel_size,npixels,deblend,contrast,targ_coord = 5,(3,3),int(np.round(L1fwhm/pixscale)),False,.001,None

@@ -3,6 +3,7 @@ setup.py
 efficiency_pipeline/__init__.py
 efficiency_pipeline/lco_fakeSNpipeline.py
 efficiency_pipeline/lco_figures.py
+efficiency_pipeline/lco_true_sn.py
 efficiency_pipeline/test_efficiency_pipeline.py
 efficiency_pipeline.egg-info/PKG-INFO
 efficiency_pipeline.egg-info/SOURCES.txt

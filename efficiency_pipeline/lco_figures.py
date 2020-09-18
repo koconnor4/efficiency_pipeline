@@ -38,7 +38,7 @@ bkg_estimator = MedianBackground()
 import warnings
 warnings.filterwarnings('ignore')
 
-from .lco_fakeSNpipeline import *
+from lco_fakeSNpipeline import *
 
 def psf_and_gauss(epsf,epsf_gaussian,saveas='lco_psf.pdf'):
     # take a look at the ePSF image built from stack and a fitted gaussian 
