@@ -11,6 +11,6 @@ Basic usage of the efficiency_pipeline package.
    
 import efficiency_pipeline
 
-efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex(lco_path=None,date_key='08.17',field_key=0)
+efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
 
 
