@@ -42,7 +42,7 @@ from photutils import source_properties, EllipticalAperture
 from photutils import BoundingBox
 from photutils import Background2D, MedianBackground
 
-from lco_figures import *
+from .lco_figures import *
 
 # Suppress warnings. Relevant for astroquery. Comment this out if you wish to see the warning messages
 import warnings
