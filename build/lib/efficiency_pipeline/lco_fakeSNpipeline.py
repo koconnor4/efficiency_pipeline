@@ -848,6 +848,8 @@ def lco_pipe_ex(path='lco_pipe_example/sdssj2309-0039'):
     gde = pickle_to+'_detection_efficiency.pdf'
     plants = pickle_to+'_plants.pdf'
 
+    return image,diff_image,ref_image,glsnID
+    
 def lco_pipe(data=None,lco_path=None,date_key='sbatch',field_key='sbatch'):
     """
     pipeline that applies the epsf measurement, fake SN planting at different mags/locations, and detection efficiency measurement for groups of images.
