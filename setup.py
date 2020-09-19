@@ -36,7 +36,7 @@ PACKAGENAME='efficiency_pipeline'
 
 # Add the project-global data
 data_files = []
-for dataFolderName in ['08.17']:
+for dataFolderName in ['08.17','lco_pipe_example']:
   pkgdatadir = os.path.join(PACKAGENAME, dataFolderName)
   data_files.extend(recursive_glob(pkgdatadir, '*'))
 

@@ -15,7 +15,7 @@ Basic Functionality
 
 Basic usage of the efficiency_pipeline package.
 
-Giving snapshot of important results for test case of image going through the pipeline. Not actually running functions just loading results from previous run.  
+Giving snapshot of important results for test case of image going through the pipeline.  
 
 
 .. code-block:: default
@@ -23,35 +23,35 @@ Giving snapshot of important results for test case of image going through the pi
    
     import efficiency_pipeline
 
-    efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex(lco_path=None,date_key='08.17',field_key=0)
-
-
+    # Getting data from test case image needed for the pipeline
+    efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
 
 
 
 
 .. rst-class:: sphx-glr-script-out
 
- Out:
 
- .. code-block:: none
+.. code-block:: pytb
 
-    Created TAP+ (v1.2.1) - Connection:
-            Host: gea.esac.esa.int
-            Use HTTPS: True
-            Port: 443
-            SSL Port: 443
-    Created TAP+ (v1.2.1) - Connection:
-            Host: geadata.esac.esa.int
-            Use HTTPS: True
-            Port: 443
-            SSL Port: 443
-    filename ~ cpt1m010-fa16-20200816-0232-e91_trim.fits (groupid SDSSJ0029-0055) has L1fwhm ~ 1.57738694975361 pixels, pixscale ~ 0.389 arcsec/pixel, and skybr 21.9799995 mag/arcsec^2; zp ~ 23.581832421758865
-    glsn ~   Source ID    Magnification Lens Z Source Z Peak Apparent Magnitude
-    -------------- ------------- ------ -------- -----------------------
-    SDSSJ0029-0055            23   0.23     0.93             21.13121462
-
-
+    Traceback (most recent call last):
+      File "/work/oconnorf/efficiency_pipeline/Docs/source/_examples/plot_package.py", line 15, in <module>
+        efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/efficiency_pipeline-0.0.1-py3.7.egg/efficiency_pipeline/lco_fakeSNpipeline.py", line 819, in lco_pipe_ex
+        glsn = ascii.read(os.path.join(path,'peakGLSN.csv'))
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/ui.py", line 287, in read
+        dat = _guess(table, new_kwargs, format, fast_reader)
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/ui.py", line 447, in _guess
+        dat = reader.read(table)
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/core.py", line 1165, in read
+        self.lines = self.inputter.get_lines(table)
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/core.py", line 305, in get_lines
+        encoding=self.encoding) as fileobj:
+      File "/home/oconnorf/miniconda/lib/python3.7/contextlib.py", line 112, in __enter__
+        return next(self.gen)
+      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/utils/data.py", line 237, in get_readable_fileobj
+        fileobj = io.FileIO(name_or_obj, 'r')
+    FileNotFoundError: [Errno 2] No such file or directory: '/work/oconnorf/efficiency_pipeline/Docs/source/_examples/lco_pipe_example/sdssj2309-0039/peakGLSN.csv'
 
 
 
@@ -59,7 +59,7 @@ Giving snapshot of important results for test case of image going through the pi
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.431 seconds)
+   **Total running time of the script:** ( 0 minutes  1.415 seconds)
 
 
 .. _sphx_glr_download_examples_plot_package.py:

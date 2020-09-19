@@ -782,7 +782,7 @@ def lco_pipe():
     pickle_to = source_output + '/' + filename[:-5] # -5 get rid of .fits
     
     # photutils source properties to detect objs in image
-    nsigma,kernel_size,npixels,deblend,contrast,targ_coord = 5,(3,3),int(np.round(L1fwhm/pixscale)),False,.001,None
+    nsigma,kernel_size,npixels,deblend,contrast,targ_coord = 3,(3,3),int(np.round(L1fwhm/pixscale)),False,.001,None
     print('Source Catalog is a photutils source_properties using nsigma ~ {} (detection threshold above img bkg), gaussian kernel sized ~ {} pix, npixels ~ {} (connected pixels needed to be considered source), deblend ~ {} w contrast {}'.format(nsigma,kernel_size,npixels,deblend,contrast))
     source_catalog = source_cat(image,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
     cat,image,threshold,segm,targ_obj = source_catalog # unpacked to make a little clearer

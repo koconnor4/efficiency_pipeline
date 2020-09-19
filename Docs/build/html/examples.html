@@ -90,6 +90,8 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#using-your-own-data">Using Your Own Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#effective-point-spread-function">Effective Point Spread Function</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="examples/plot_package.html">Basic Functionality</a></li>
@@ -164,9 +166,77 @@
             
   <div class="section" id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="fill-in-your-example-here">
-<h2>Fill in your example here.<a class="headerlink" href="#fill-in-your-example-here" title="Permalink to this headline">¶</a></h2>
 </div>
+<div class="section" id="using-your-own-data">
+<h1>Using Your Own Data<a class="headerlink" href="#using-your-own-data" title="Permalink to this headline">¶</a></h1>
+<p>In order to measure the detection efficiency for your image data, you must open the fits files, <code class="xref py py-class docutils literal notranslate"><span class="pre">astropy.io.fits.open</span></code>. There is an LCO example provided for reference. In this example, we have a strongly lensed galaxy-galaxy system with image dirs (in the <code class="docutils literal notranslate"><span class="pre">efficiency_pipeline/lco_pipe_example/sdssj2309-0039/</span></code> folder)
+<code class="docutils literal notranslate"><span class="pre">dia_out</span></code>, <code class="docutils literal notranslate"><span class="pre">dia_trim</span></code>, <code class="docutils literal notranslate"><span class="pre">source_im</span></code>, and a table of predicted peak lensed SNIa mags <code class="docutils literal notranslate"><span class="pre">peakGLSN.csv</span></code> . The directories contain the differences, single visit exposures, and the file which you’d like to do the analysis for. First we can read in these images (and that table) taking/printing the necessary values from source file header:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">image</span><span class="p">,</span><span class="n">diff_image</span><span class="p">,</span><span class="n">ref_image</span><span class="p">,</span><span class="n">glsnID</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">lco_pipe_ex</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">filename</span> <span class="o">~</span> <span class="n">cpt1m010</span><span class="o">-</span><span class="n">fa16</span><span class="o">-</span><span class="mi">20200816</span><span class="o">-</span><span class="mi">0229</span><span class="o">-</span><span class="n">e91_trim</span><span class="o">.</span><span class="n">fits</span> <span class="p">(</span><span class="n">groupid</span> <span class="n">SDSSJ2309</span><span class="o">-</span><span class="mi">0039</span><span class="p">)</span> <span class="n">has</span> <span class="n">L1fwhm</span> <span class="o">~</span> <span class="mf">1.491417758955098</span> <span class="n">pixels</span><span class="p">,</span> <span class="n">pixscale</span> <span class="o">~</span> <span class="mf">0.389</span> <span class="n">arcsec</span><span class="o">/</span><span class="n">pixel</span><span class="p">,</span> <span class="ow">and</span> <span class="n">skybr</span> <span class="mf">21.9799995</span> <span class="n">mag</span><span class="o">/</span><span class="n">arcsec</span><span class="o">^</span><span class="mi">2</span><span class="p">;</span> <span class="n">zp</span> <span class="o">~</span> <span class="mf">23.60843226612176</span>
+
+<span class="n">glsn</span> <span class="o">~</span>
+<span class="n">Source</span> <span class="n">ID</span>    <span class="n">Magnification</span> <span class="n">Lens</span> <span class="n">Z</span> <span class="n">Source</span> <span class="n">Z</span> <span class="n">Peak</span> <span class="n">Apparent</span> <span class="n">Magnitude</span>
+<span class="o">--------------</span> <span class="o">-------------</span> <span class="o">------</span> <span class="o">--------</span> <span class="o">-----------------------</span>
+<span class="n">SDSSJ2309</span><span class="o">-</span><span class="mi">0039</span>             <span class="mi">4</span>   <span class="mf">0.29</span>      <span class="mf">1.0</span>             <span class="mf">23.22508768</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="effective-point-spread-function">
+<h1>Effective Point Spread Function<a class="headerlink" href="#effective-point-spread-function" title="Permalink to this headline">¶</a></h1>
+<p>The first step is to find the stars in the image…</p>
+<p>All sources can be found applying several photutil helpers, detection threshold is set using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.detection.detect_threshold</span></code>, sources above the threshold value return a segmentation image object using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.segmentation.detect_sources</span></code>, the image background is determined using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.background.Background2D</span></code>, and finally photometric and morphological properties of the background subtracted image are determined using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.segmentation.source_properties</span></code>, these all occur inside the lco_fakeSNpipeline.source_cat function, but first need to define the detection parameters</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">nsigma</span><span class="p">,</span><span class="n">kernel_size</span><span class="p">,</span><span class="n">npixels</span><span class="p">,</span><span class="n">deblend</span><span class="p">,</span><span class="n">contrast</span><span class="p">,</span><span class="n">targ_coord</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">L1fwhm</span><span class="o">/</span><span class="n">pixscale</span><span class="p">)),</span><span class="kc">False</span><span class="p">,</span><span class="o">.</span><span class="mi">001</span><span class="p">,</span><span class="kc">None</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Source Catalog using nsigma ~ </span><span class="si">{}</span><span class="s1"> (detection threshold above img bkg), gaussian kernel sized ~ </span><span class="si">{}</span><span class="s1"> pix, npixels ~ </span><span class="si">{}</span><span class="s1"> (connected pixels needed to be considered source), deblend ~ </span><span class="si">{}</span><span class="s1"> w contrast </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nsigma</span><span class="p">,</span><span class="n">kernel_size</span><span class="p">,</span><span class="n">npixels</span><span class="p">,</span><span class="n">deblend</span><span class="p">,</span><span class="n">contrast</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+</pre></div>
+</div>
+<p>Now run lco_fakeSNpipeline.source_cat to find the objects in image meeting criteria for detection</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source_catalog</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">source_cat</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">nsigma</span><span class="o">=</span><span class="n">nsigma</span><span class="p">,</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span><span class="n">npixels</span><span class="o">=</span><span class="n">npixels</span><span class="p">,</span><span class="n">deblend</span><span class="o">=</span><span class="n">deblend</span><span class="p">,</span><span class="n">contrast</span><span class="o">=</span><span class="n">contrast</span><span class="p">,</span><span class="n">targ_coord</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">cat</span><span class="p">,</span><span class="n">image</span><span class="p">,</span><span class="n">threshold</span><span class="p">,</span><span class="n">segm</span><span class="p">,</span><span class="n">targ_obj</span> <span class="o">=</span> <span class="n">source_catalog</span> <span class="c1"># unpacked to make a little clearer</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+</pre></div>
+</div>
+<p>In a general case these objects from the catalog could be restricted to provide point sources, however in the case of this LCO survey done in rp, the positions of stars measured in similar filter are readily available <code class="xref py py-class docutils literal notranslate"><span class="pre">Gaia.query_object_async</span></code>, the results of the Gaia query within the image fov are taken</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">gaia_results</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+<span class="n">gaia</span><span class="p">,</span><span class="n">image</span> <span class="o">=</span> <span class="n">results</span> <span class="c1"># unpacked</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+</pre></div>
+</div>
+<p>Cutouts around these stars are extracted from the image after passing criteria including that they are not overlapping with other sources and have a flux which is below the LCO detector saturation/non-linearity but still gave a strong signal in Gaia.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">extracted_stars</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">stars</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="n">good_stars</span><span class="p">,</span><span class="n">image</span> <span class="o">=</span> <span class="n">extracted_stars</span> <span class="c1"># unpacked</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+</pre></div>
+</div>
+<p>Finally, the effective point spread function is constructed for these stars using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.psf.EPSFBuilder</span></code>. A 2D-Gaussian is fit to the resulting epsf using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.centroids.GaussianConst2D</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">EPSF</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">ePSF</span><span class="p">(</span><span class="n">extracted_stars</span><span class="p">,</span><span class="n">oversampling</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">epsf</span><span class="p">,</span><span class="n">fitted_stars</span> <span class="o">=</span> <span class="n">EPSF</span> <span class="c1"># unpacked</span>
+    <span class="n">epsf_gaussian</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">gaussian2d</span><span class="p">(</span><span class="n">epsf</span><span class="p">)</span>
+<span class="n">fit_gaussian</span><span class="p">,</span><span class="n">levels</span><span class="p">,</span><span class="n">xctr_vals</span><span class="p">,</span><span class="n">yctr_vals</span><span class="p">,</span><span class="n">image1</span><span class="p">,</span><span class="n">img_epsf</span><span class="p">,</span><span class="n">resid</span> <span class="o">=</span> <span class="n">epsf_gaussian</span> <span class="c1"># unpacked... levels list amplitude - sigma, ctr vals are gauss model sliced, image1 is array of values from gaussian fit in shape of epsf, img_epsf is epsf instance of it, resid is gauss - epsf</span>
+</pre></div>
+</div>
+<p>Out:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+</pre></div>
+</div>
+<p>Images showing the epsf against fitted gaussian, as well as the extracted stars that went into the epsf are made.</p>
+<a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_psf.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_psf.png" style="width: 600px; height: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_stars.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_stars.png" style="width: 600px; height: 600px;" /></a>
 </div>
 
 

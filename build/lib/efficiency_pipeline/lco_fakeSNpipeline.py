@@ -42,7 +42,7 @@ from photutils import source_properties, EllipticalAperture
 from photutils import BoundingBox
 from photutils import Background2D, MedianBackground
 
-from lco_figures import *
+from .lco_figures import *
 
 # Suppress warnings. Relevant for astroquery. Comment this out if you wish to see the warning messages
 import warnings
@@ -808,10 +808,12 @@ def detection_efficiency(plant,cat):
     print('Detection efficiency (N_plants_detected/N_plants) ~ {} on mag ~ {} SNe'.format(efficiency,magfakes))
     return efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl
 
-def lco_pipe_ex(path='/work/oconnorf/efficiency_pipeline/efficiency_pipeline/lco_pipe_example/sdssj2309-0039'):
+def lco_pipe_ex(path='lco_pipe_example/sdssj2309-0039'):
     """
     test case image going through the pipeline.
     """
+    current_dir = os.path.abspath(os.getcwd())
+    path = os.path.join(current_dir,path)
     my_data = get_data(path)
     # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
     glsn = ascii.read(os.path.join(path,'peakGLSN.csv'))

@@ -10,7 +10,7 @@ def test_efficiency_pipeline():
 	#Fill in tests here.
 	try:   
 		total+=1 
-		print('Testing package...',end='')
+		efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
 		print('Passed!')
 	except Exception as e:
 		print('Failed')

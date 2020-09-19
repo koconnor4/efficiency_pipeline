@@ -808,10 +808,12 @@ def detection_efficiency(plant,cat):
     print('Detection efficiency (N_plants_detected/N_plants) ~ {} on mag ~ {} SNe'.format(efficiency,magfakes))
     return efficiency,magfakes,tbl,single_truth_tbl,repeat_truth_tbl,false_tbl
 
-def lco_pipe_ex(path='/work/oconnorf/efficiency_pipeline/efficiency_pipeline/lco_pipe_example/sdssj2309-0039'):
+def lco_pipe_ex(path='lco_pipe_example/sdssj2309-0039'):
     """
     test case image going through the pipeline.
     """
+    current_dir = os.path.abspath(os.getcwd())
+    path = os.path.join(current_dir,path)
     my_data = get_data(path)
     # a table that has the galaxy-galaxy strong lens system: id, magnification, lens_z, source_z, peakIa mag
     glsn = ascii.read(os.path.join(path,'peakGLSN.csv'))
@@ -846,6 +848,8 @@ def lco_pipe_ex(path='/work/oconnorf/efficiency_pipeline/efficiency_pipeline/lco
     gde = pickle_to+'_detection_efficiency.pdf'
     plants = pickle_to+'_plants.pdf'
 
+    return image,diff_image,ref_image,glsnID
+    
 def lco_pipe(data=None,lco_path=None,date_key='sbatch',field_key='sbatch'):
     """
     pipeline that applies the epsf measurement, fake SN planting at different mags/locations, and detection efficiency measurement for groups of images.
