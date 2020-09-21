@@ -99,7 +99,7 @@ def psf_and_gauss(epsf,epsf_gaussian,saveas='lco_psf.pdf'):
     med=np.median(resid)
     std=np.std(resid)
     # define the colormap
-    cmap = plt.get_cmap('YlGnBu')
+    cmap = plt.get_cmap('viridis') # YlGnBu
     # extract all colors from the map
     cmaplist = [cmap(i) for i in range(cmap.N)]
     # create the new map

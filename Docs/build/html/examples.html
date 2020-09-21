@@ -33,6 +33,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -92,6 +93,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#using-your-own-data">Using Your Own Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#effective-point-spread-function">Effective Point Spread Function</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#detection-efficiency">Detection Efficiency</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="examples/plot_package.html">Basic Functionality</a></li>
@@ -193,25 +195,40 @@
 </pre></div>
 </div>
 <p>Out:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Source</span> <span class="n">Catalog</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">photutils</span> <span class="n">source_properties</span> <span class="n">using</span> <span class="n">nsigma</span> <span class="o">~</span> <span class="mi">3</span> <span class="p">(</span><span class="n">detection</span> <span class="n">threshold</span> <span class="n">above</span> <span class="n">img</span> <span class="n">bkg</span><span class="p">),</span> <span class="n">gaussian</span> <span class="n">kernel</span> <span class="n">sized</span> <span class="o">~</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="n">pix</span><span class="p">,</span> <span class="n">npixels</span> <span class="o">~</span> <span class="mi">4</span> <span class="p">(</span><span class="n">connected</span> <span class="n">pixels</span> <span class="n">needed</span> <span class="n">to</span> <span class="n">be</span> <span class="n">considered</span> <span class="n">source</span><span class="p">),</span> <span class="n">deblend</span> <span class="o">~</span> <span class="kc">False</span> <span class="n">w</span> <span class="n">contrast</span> <span class="mf">0.001</span>
 </pre></div>
 </div>
 <p>Now run lco_fakeSNpipeline.source_cat to find the objects in image meeting criteria for detection</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source_catalog</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">source_cat</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">nsigma</span><span class="o">=</span><span class="n">nsigma</span><span class="p">,</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span><span class="n">npixels</span><span class="o">=</span><span class="n">npixels</span><span class="p">,</span><span class="n">deblend</span><span class="o">=</span><span class="n">deblend</span><span class="p">,</span><span class="n">contrast</span><span class="o">=</span><span class="n">contrast</span><span class="p">,</span><span class="n">targ_coord</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 <span class="n">cat</span><span class="p">,</span><span class="n">image</span><span class="p">,</span><span class="n">threshold</span><span class="p">,</span><span class="n">segm</span><span class="p">,</span><span class="n">targ_obj</span> <span class="o">=</span> <span class="n">source_catalog</span> <span class="c1"># unpacked to make a little clearer</span>
+<span class="n">tbl</span><span class="o">=</span><span class="n">cat</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Sources detected ~ &#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tbl</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">colnames</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tbl</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>Out:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">Sources</span> <span class="n">detected</span> <span class="o">~</span> <span class="mi">535</span>
+
+    <span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;xcentroid&#39;</span><span class="p">,</span> <span class="s1">&#39;ycentroid&#39;</span><span class="p">,</span> <span class="s1">&#39;sky_centroid&#39;</span><span class="p">,</span> <span class="s1">&#39;sky_centroid_icrs&#39;</span><span class="p">,</span> <span class="s1">&#39;source_sum&#39;</span><span class="p">,</span> <span class="s1">&#39;source_sum_err&#39;</span><span class="p">,</span> <span class="s1">&#39;background_sum&#39;</span><span class="p">,</span> <span class="s1">&#39;background_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;background_at_centroid&#39;</span><span class="p">,</span> <span class="s1">&#39;bbox_xmin&#39;</span><span class="p">,</span> <span class="s1">&#39;bbox_xmax&#39;</span><span class="p">,</span> <span class="s1">&#39;bbox_ymin&#39;</span><span class="p">,</span> <span class="s1">&#39;bbox_ymax&#39;</span><span class="p">,</span> <span class="s1">&#39;min_value&#39;</span><span class="p">,</span> <span class="s1">&#39;max_value&#39;</span><span class="p">,</span> <span class="s1">&#39;minval_xpos&#39;</span><span class="p">,</span> <span class="s1">&#39;minval_ypos&#39;</span><span class="p">,</span> <span class="s1">&#39;maxval_xpos&#39;</span><span class="p">,</span> <span class="s1">&#39;maxval_ypos&#39;</span><span class="p">,</span> <span class="s1">&#39;area&#39;</span><span class="p">,</span> <span class="s1">&#39;equivalent_radius&#39;</span><span class="p">,</span> <span class="s1">&#39;perimeter&#39;</span><span class="p">,</span> <span class="s1">&#39;semimajor_axis_sigma&#39;</span><span class="p">,</span> <span class="s1">&#39;semiminor_axis_sigma&#39;</span><span class="p">,</span> <span class="s1">&#39;orientation&#39;</span><span class="p">,</span> <span class="s1">&#39;eccentricity&#39;</span><span class="p">,</span> <span class="s1">&#39;ellipticity&#39;</span><span class="p">,</span> <span class="s1">&#39;elongation&#39;</span><span class="p">,</span> <span class="s1">&#39;covar_sigx2&#39;</span><span class="p">,</span> <span class="s1">&#39;covar_sigxy&#39;</span><span class="p">,</span> <span class="s1">&#39;covar_sigy2&#39;</span><span class="p">,</span> <span class="s1">&#39;cxx&#39;</span><span class="p">,</span> <span class="s1">&#39;cxy&#39;</span><span class="p">,</span> <span class="s1">&#39;cyy&#39;</span><span class="p">,</span> <span class="s1">&#39;gini&#39;</span><span class="p">]</span>
+
+      <span class="nb">id</span>      <span class="n">xcentroid</span>      <span class="o">...</span>         <span class="n">cyy</span>                <span class="n">gini</span>
+         <span class="n">pix</span>         <span class="o">...</span>       <span class="mi">1</span> <span class="o">/</span> <span class="n">pix2</span>
+         <span class="n">int64</span>      <span class="n">float64</span>       <span class="o">...</span>       <span class="n">float64</span>            <span class="n">float64</span>
+         <span class="o">-----</span> <span class="o">------------------</span> <span class="o">...</span> <span class="o">-------------------</span> <span class="o">------------------</span>
+<span class="mi">1</span>  <span class="mf">91.56201534245015</span> <span class="o">...</span>  <span class="mf">0.5351457857358272</span> <span class="mf">0.1629734606310599</span>
+<span class="mi">2</span>   <span class="mf">1949.18898760756</span> <span class="o">...</span>   <span class="mf">0.769125864754405</span> <span class="mf">0.1569260376108942</span>
+<span class="mi">3</span> <span class="mf">1189.4932560102652</span> <span class="o">...</span> <span class="mf">0.47597065439640546</span> <span class="mf">0.1332119485911448</span>
 </pre></div>
 </div>
-<p>In a general case these objects from the catalog could be restricted to provide point sources, however in the case of this LCO survey done in rp, the positions of stars measured in similar filter are readily available <code class="xref py py-class docutils literal notranslate"><span class="pre">Gaia.query_object_async</span></code>, the results of the Gaia query within the image fov are taken</p>
+<p>In a general case the properties of these objects from the catalog could be restricted to provide point sources, however in the case of this LCO survey done in rp, the positions of stars measured in similar filter are readily available <code class="xref py py-class docutils literal notranslate"><span class="pre">Gaia.query_object_async</span></code>, the results of the Gaia query within the image fov are taken</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="n">lco_fakeSNpipeline</span><span class="o">.</span><span class="n">gaia_results</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
 <span class="n">gaia</span><span class="p">,</span><span class="n">image</span> <span class="o">=</span> <span class="n">results</span> <span class="c1"># unpacked</span>
 </pre></div>
 </div>
 <p>Out:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">INFO</span><span class="p">:</span> <span class="n">Query</span> <span class="n">finished</span><span class="o">.</span> <span class="p">[</span><span class="n">astroquery</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">tap</span><span class="o">.</span><span class="n">core</span><span class="p">]</span>
+<span class="n">there</span> <span class="n">are</span> <span class="mi">50</span> <span class="n">stars</span> <span class="n">available</span> <span class="n">within</span> <span class="n">fov</span> <span class="kn">from</span> <span class="nn">gaia</span> <span class="n">results</span> <span class="n">queried</span>
 </pre></div>
 </div>
 <p>Cutouts around these stars are extracted from the image after passing criteria including that they are not overlapping with other sources and have a flux which is below the LCO detector saturation/non-linearity but still gave a strong signal in Gaia.</p>
@@ -220,7 +237,9 @@
 </pre></div>
 </div>
 <p>Out:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">46</span> <span class="n">stars</span><span class="p">,</span> <span class="n">after</span> <span class="n">removing</span> <span class="n">intersections</span>
+<span class="n">restricting</span> <span class="n">extractions</span> <span class="n">to</span> <span class="n">stars</span> <span class="n">w</span> <span class="n">rp</span> <span class="n">flux</span><span class="o">/</span><span class="n">error</span> <span class="o">&gt;</span> <span class="mi">100</span> <span class="n">we</span> <span class="n">have</span> <span class="mi">13</span> <span class="n">to</span> <span class="n">consider</span>
+<span class="n">removed</span> <span class="n">stars</span> <span class="n">above</span> <span class="n">saturation</span> <span class="ow">or</span> <span class="n">non</span><span class="o">-</span><span class="n">linearity</span> <span class="n">level</span> <span class="o">~</span> <span class="mf">149150.0</span><span class="p">,</span> <span class="mf">125600.0</span> <span class="n">ADU</span><span class="p">;</span> <span class="n">now</span> <span class="n">have</span> <span class="mi">13</span>
 </pre></div>
 </div>
 <p>Finally, the effective point spread function is constructed for these stars using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.psf.EPSFBuilder</span></code>. A 2D-Gaussian is fit to the resulting epsf using <code class="xref py py-class docutils literal notranslate"><span class="pre">photutils.centroids.GaussianConst2D</span></code></p>
@@ -231,12 +250,115 @@
 </pre></div>
 </div>
 <p>Out:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">placeholder</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PROGRESS: iteration 1 (of max 10) [? s/iter]
+PROGRESS: iteration 2 (of max 10) [0.4 s/iter]
+PROGRESS: iteration 3 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 4 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 5 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 6 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 7 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 8 (of max 10) [0.3 s/iter]
+PROGRESS: iteration 9 (of max 10) [0.4 s/iter]
+PROGRESS: iteration 10 (of max 10) [0.4 s/iter]
+gaussian fit to epsf:
+(&#39;constant&#39;, &#39;amplitude&#39;, &#39;x_mean&#39;, &#39;y_mean&#39;, &#39;x_stddev&#39;, &#39;y_stddev&#39;, &#39;theta&#39;) [ 3.31007887e-04  3.84764457e-02  2.45832228e+01  2.52068898e+01
+  3.83262067e+00  4.11401422e+00 -2.33683005e+00]
+gaussian fwhm ~ 4.67822378372141 pixels (an avg of the fit sigma_x sigma_y w sigma_to_fwhm)
+13
 </pre></div>
 </div>
 <p>Images showing the epsf against fitted gaussian, as well as the extracted stars that went into the epsf are made.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># make figures</span>
+<span class="n">lco_figures</span><span class="o">.</span><span class="n">psf_and_gauss</span><span class="p">(</span><span class="n">epsf</span><span class="p">,</span><span class="n">epsf_gaussian</span><span class="p">,</span><span class="n">saveas</span><span class="o">=</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_psf.pdf&#39;</span><span class="p">)</span>
+<span class="n">lco_figures</span><span class="o">.</span><span class="n">used_stars</span><span class="p">(</span><span class="n">fitted_stars</span><span class="p">,</span><span class="n">saveas</span><span class="o">=</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_stars.pdf&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 <a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_psf.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_psf.png" style="width: 600px; height: 600px;" /></a>
 <a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_stars.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_stars.png" style="width: 600px; height: 600px;" /></a>
+</div>
+<div class="section" id="detection-efficiency">
+<h1>Detection Efficiency<a class="headerlink" href="#detection-efficiency" title="Permalink to this headline">¶</a></h1>
+<p>A pixel level detection efficiency measurement is performed by treating the epsf as a fake SN, it is scaled to different magnitudes, planted into the difference image, and recovered; the fraction of total plants recovered defining the efficiency.</p>
+<p>The first step is to define magnitudes to measure efficiency for</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># measured psf is now going to be scaled to different magnitudes and planted in the difference image</span>
+<span class="n">mags</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">skybr</span><span class="o">-</span><span class="mf">4.5</span><span class="p">,</span><span class="n">skybr</span><span class="o">+</span><span class="mi">3</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)</span> <span class="c1">#zp ~ 23.5 # rough zp</span>
+</pre></div>
+</div>
+<p>There are different planting locations applied, one straight-forward method is to plant in a grid across a full image, another is to zoom in and do a local measurement. There are helper functions lco_fakeSNpipeline.lattice and lco_fakeSNpipeline.target which find these coordinates. (In the case of LCO, the target of interest is the strong lens galaxy-galaxy system, so the cutout is made around this region)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">locations</span> <span class="o">=</span> <span class="n">lattice</span><span class="p">(</span><span class="n">image</span><span class="p">)</span> <span class="c1"># the full img grid coords</span>
+<span class="c1"># target galaxy work, tuples cutting boxes around target (data,patch), how/if planting on cores might change detection efficiency</span>
+<span class="c1"># also returns targ_obj again account for updates using ref (in the cases where empty targ_obj ie not detected in source)</span>
+<span class="n">target_boxes</span> <span class="o">=</span> <span class="n">target</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">targ_obj</span><span class="p">,</span><span class="n">ref</span><span class="o">=</span><span class="n">ref_image</span><span class="p">,</span><span class="n">diff</span><span class="o">=</span><span class="n">diff_image</span><span class="p">)</span>
+<span class="n">targ_obj</span><span class="p">,</span><span class="n">cuts</span><span class="p">,</span><span class="n">bkg_core</span><span class="p">,</span><span class="n">bkg_1</span><span class="p">,</span><span class="n">bkg_2</span> <span class="o">=</span> <span class="n">target_boxes</span> <span class="c1"># unpacked</span>
+<span class="n">cut_targ</span><span class="p">,</span><span class="n">cut_diff</span><span class="p">,</span><span class="n">cut_ref</span> <span class="o">=</span> <span class="n">cuts</span> <span class="c1"># unpack cuts around target source,diff,and ref</span>
+</pre></div>
+</div>
+<p>Here is an example of looping through the defined magnitudes to plant, recover, and determine efficiencies in the grid method</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">mag</span> <span class="ow">in</span> <span class="n">mags</span><span class="p">:</span>
+<span class="c1"># create plant image</span>
+<span class="n">plantname</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_planted_lattice_mag</span><span class="si">{}</span><span class="s1">.fits&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pickle_to</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">mag</span><span class="p">))</span>
+<span class="n">planted</span> <span class="o">=</span> <span class="n">plant</span><span class="p">(</span><span class="n">diff_image</span><span class="p">,</span><span class="n">epsf</span><span class="p">,</span><span class="n">source_catalog</span><span class="p">,</span><span class="n">hdr</span><span class="o">=</span><span class="n">hdr</span><span class="p">,</span><span class="n">mag</span><span class="o">=</span><span class="n">mag</span><span class="p">,</span><span class="n">location</span><span class="o">=</span><span class="n">locations</span><span class="p">,</span><span class="n">zp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">plantname</span><span class="o">=</span><span class="n">plantname</span><span class="p">)</span>
+<span class="n">plant_im</span><span class="p">,</span><span class="n">pixels</span> <span class="o">=</span> <span class="n">planted</span> <span class="c1"># unpack</span>
+<span class="c1"># source properties ~ detecting objs in fake image</span>
+<span class="n">fakesource_cat</span> <span class="o">=</span> <span class="n">source_cat</span><span class="p">(</span><span class="n">plant_im</span><span class="p">,</span><span class="n">nsigma</span><span class="o">=</span><span class="n">nsigma</span><span class="p">,</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span><span class="n">npixels</span><span class="o">=</span><span class="n">npixels</span><span class="p">,</span><span class="n">deblend</span><span class="o">=</span><span class="n">deblend</span><span class="p">,</span><span class="n">contrast</span><span class="o">=</span><span class="n">contrast</span><span class="p">,</span><span class="n">targ_coord</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">fakecat</span><span class="p">,</span><span class="n">fakeimage</span><span class="p">,</span><span class="n">fakethreshold</span><span class="p">,</span><span class="n">fakesegm</span><span class="p">,</span><span class="n">faketarg_obj</span> <span class="o">=</span> <span class="n">fakesource_cat</span> <span class="c1"># unpacked to make a little clearer</span>
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fakecat</span><span class="o">.</span><span class="n">to_table</span><span class="p">(),</span><span class="nb">open</span><span class="p">(</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_fakesource_cat.pkl&#39;</span><span class="p">,</span><span class="s1">&#39;wb&#39;</span><span class="p">))</span>
+<span class="c1"># detection efficiency</span>
+<span class="n">tmp</span> <span class="o">=</span> <span class="n">detection_efficiency</span><span class="p">(</span><span class="n">planted</span><span class="p">,</span><span class="n">fakesource_cat</span><span class="p">)</span>
+<span class="n">efficiency</span><span class="p">,</span><span class="n">magfakes</span><span class="p">,</span><span class="n">tbl</span><span class="p">,</span><span class="n">single_truth_tbl</span><span class="p">,</span><span class="n">repeat_truth_tbl</span><span class="p">,</span><span class="n">false_tbl</span> <span class="o">=</span> <span class="n">tmp</span>
+<span class="n">efficiencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">efficiency</span><span class="p">)</span>
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span><span class="nb">open</span><span class="p">(</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_detection_efficiency_mag</span><span class="si">{}</span><span class="s1">.pkl&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mag</span><span class="p">)),</span><span class="s1">&#39;wb&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">efficiency</span><span class="p">,</span><span class="n">magfakes</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------------&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Out</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">529</span> <span class="n">SNe</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">19.9799995</span> <span class="p">(</span><span class="n">epsf</span><span class="o">*=</span><span class="n">mu</span> <span class="o">~</span> <span class="mf">3300.1942005590113</span><span class="p">)</span> <span class="n">planted</span> <span class="ow">in</span> <span class="n">lattice</span> <span class="n">across</span> <span class="n">image</span><span class="p">;</span> <span class="n">zp</span> <span class="o">~</span> <span class="mf">23.60843226612176</span>
+<span class="mi">519</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">single</span> <span class="n">clean</span> <span class="n">source</span> <span class="n">detected</span><span class="p">,</span> <span class="mi">5</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">multiple</span> <span class="n">sources</span> <span class="n">detected</span> <span class="n">nearby</span><span class="p">,</span> <span class="mi">234</span> <span class="n">false</span> <span class="n">detections</span>
+<span class="n">Detection</span> <span class="n">efficiency</span> <span class="p">(</span><span class="n">N_plants_detected</span><span class="o">/</span><span class="n">N_plants</span><span class="p">)</span> <span class="o">~</span> <span class="mf">0.9905482041587902</span> <span class="n">on</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">19.9799995</span> <span class="n">SNe</span>
+<span class="mf">0.9905482041587902</span> <span class="mf">19.9799995</span>
+<span class="o">--------------------------------------------------------------</span>
+<span class="mi">529</span> <span class="n">SNe</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">20.4799995</span> <span class="p">(</span><span class="n">epsf</span><span class="o">*=</span><span class="n">mu</span> <span class="o">~</span> <span class="mf">2082.281769053648</span><span class="p">)</span> <span class="n">planted</span> <span class="ow">in</span> <span class="n">lattice</span> <span class="n">across</span> <span class="n">image</span><span class="p">;</span> <span class="n">zp</span> <span class="o">~</span> <span class="mf">23.60843226612176</span>
+<span class="mi">48</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">single</span> <span class="n">clean</span> <span class="n">source</span> <span class="n">detected</span><span class="p">,</span> <span class="mi">0</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">multiple</span> <span class="n">sources</span> <span class="n">detected</span> <span class="n">nearby</span><span class="p">,</span> <span class="mi">236</span> <span class="n">false</span> <span class="n">detections</span>
+<span class="n">Detection</span> <span class="n">efficiency</span> <span class="p">(</span><span class="n">N_plants_detected</span><span class="o">/</span><span class="n">N_plants</span><span class="p">)</span> <span class="o">~</span> <span class="mf">0.09073724007561437</span> <span class="n">on</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">20.4799995</span> <span class="n">SNe</span>
+<span class="mf">0.09073724007561437</span> <span class="mf">20.4799995</span>
+<span class="o">--------------------------------------------------------------</span>
+<span class="mi">529</span> <span class="n">SNe</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">20.9799995</span> <span class="p">(</span><span class="n">epsf</span><span class="o">*=</span><span class="n">mu</span> <span class="o">~</span> <span class="mf">1313.8309754616091</span><span class="p">)</span> <span class="n">planted</span> <span class="ow">in</span> <span class="n">lattice</span> <span class="n">across</span> <span class="n">image</span><span class="p">;</span> <span class="n">zp</span> <span class="o">~</span> <span class="mf">23.60843226612176</span>
+<span class="mi">3</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">single</span> <span class="n">clean</span> <span class="n">source</span> <span class="n">detected</span><span class="p">,</span> <span class="mi">0</span> <span class="n">planted</span> <span class="n">SNe</span> <span class="n">had</span> <span class="n">multiple</span> <span class="n">sources</span> <span class="n">detected</span> <span class="n">nearby</span><span class="p">,</span> <span class="mi">237</span> <span class="n">false</span> <span class="n">detections</span>
+<span class="n">Detection</span> <span class="n">efficiency</span> <span class="p">(</span><span class="n">N_plants_detected</span><span class="o">/</span><span class="n">N_plants</span><span class="p">)</span> <span class="o">~</span> <span class="mf">0.005671077504725898</span> <span class="n">on</span> <span class="n">mag</span> <span class="o">~</span> <span class="mf">20.9799995</span> <span class="n">SNe</span>
+<span class="mf">0.005671077504725898</span> <span class="mf">20.9799995</span>
+<span class="o">--------------------------------------------------------------</span>
+</pre></div>
+</div>
+<p>A quick summary of the efficiencies measured can be provided and a parameter m50 at which there is a fifty percent chance of detection defined</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="nb">print</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;efficiencies: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">efficiencies</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;mags: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mags</span><span class="p">))</span>
+<span class="c1"># use interp to get magnitude at which we have 50% detection efficiency</span>
+<span class="c1"># need the values increasing along x for interp to work properly</span>
+<span class="n">efficiencies</span><span class="p">,</span><span class="n">mags</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">efficiencies</span><span class="p">),</span><span class="nb">list</span><span class="p">(</span><span class="n">mags</span><span class="p">)</span>
+<span class="n">efficiencies</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+<span class="n">mags</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+<span class="n">m50</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span><span class="n">efficiencies</span><span class="p">,</span><span class="n">mags</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;m50 ~ </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m50</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Out</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cpt1m010</span><span class="o">-</span><span class="n">fa16</span><span class="o">-</span><span class="mi">20200816</span><span class="o">-</span><span class="mi">0229</span><span class="o">-</span><span class="n">e91_trim</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">efficiencies</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.994328922495274</span><span class="p">,</span> <span class="mf">0.996219281663516</span><span class="p">,</span> <span class="mf">0.994328922495274</span><span class="p">,</span> <span class="mf">0.994328922495274</span><span class="p">,</span> <span class="mf">0.996219281663516</span><span class="p">,</span> <span class="mf">0.9905482041587902</span><span class="p">,</span> <span class="mf">0.09073724007561437</span><span class="p">,</span> <span class="mf">0.005671077504725898</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">,</span> <span class="mf">0.003780718336483932</span><span class="p">]</span>
+<span class="n">mags</span><span class="p">:</span> <span class="p">[</span><span class="mf">17.4799995</span> <span class="mf">17.9799995</span> <span class="mf">18.4799995</span> <span class="mf">18.9799995</span> <span class="mf">19.4799995</span> <span class="mf">19.9799995</span> <span class="mf">20.4799995</span> <span class="mf">20.9799995</span> <span class="mf">21.4799995</span> <span class="mf">21.9799995</span> <span class="mf">22.4799995</span> <span class="mf">22.9799995</span> <span class="mf">23.4799995</span> <span class="mf">23.9799995</span> <span class="mf">24.4799995</span><span class="p">]</span>
+<span class="n">m50</span> <span class="o">~</span> <span class="mf">20.252583533613446</span>
+</pre></div>
+</div>
+<p>An exponential curve with two parameters alpha and m50 is fit to the data <span class="math notranslate nohighlight">\(\epsilon(m) = \big(1+e^{\alpha(m-m50)}\big)^{-1}\)</span></p>
+<p>Figures are made showing the plants and the efficiency</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="c1"># make figures</span>
+<span class="n">lco_figures</span><span class="o">.</span><span class="n">detection_efficiency</span><span class="p">(</span><span class="n">mags</span><span class="p">,</span><span class="n">efficiencies</span><span class="p">,</span><span class="n">m50</span><span class="p">,</span><span class="n">target_boxes</span><span class="p">,</span><span class="n">skybr</span><span class="p">,</span><span class="n">zp</span><span class="p">,</span><span class="n">glsn</span><span class="o">=</span><span class="n">glsnID</span><span class="p">,</span><span class="n">saveas</span><span class="o">=</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_detection_efficiency.pdf&#39;</span><span class="p">)</span>
+<span class="n">lco_figures</span><span class="o">.</span><span class="n">lattice_planted</span><span class="p">(</span><span class="n">mags</span><span class="p">,</span><span class="n">m50</span><span class="p">,</span><span class="n">pickle_to</span><span class="o">=</span><span class="n">pickle_to</span><span class="p">,</span><span class="n">saveas</span><span class="o">=</span><span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_plants.pdf&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_detection_efficiency.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_detection_efficiency.png" style="width: 600px; height: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/cpt1m010-fa16-20200816-0229-e91_trim_plants.png"><img alt="alternate text" class="align-center" src="_images/cpt1m010-fa16-20200816-0229-e91_trim_plants.png" style="width: 600px; height: 600px;" /></a>
 </div>
 
 

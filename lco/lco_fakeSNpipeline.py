@@ -786,7 +786,7 @@ def lco_pipe():
     print('Source Catalog is a photutils source_properties using nsigma ~ {} (detection threshold above img bkg), gaussian kernel sized ~ {} pix, npixels ~ {} (connected pixels needed to be considered source), deblend ~ {} w contrast {}'.format(nsigma,kernel_size,npixels,deblend,contrast))
     source_catalog = source_cat(image,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
     cat,image,threshold,segm,targ_obj = source_catalog # unpacked to make a little clearer
-    pickle.dump(cat,open(pickle_to + '_source_cat.pkl','wb'))
+    pickle.dump(cat.to_table(),open(pickle_to + '_source_cat.pkl','wb'))
 
     # get stars from the astroquery on gaia
     results = gaia_results(image)
@@ -843,7 +843,7 @@ def lco_pipe():
             print(j,i)
             fakesource_cat = source_cat(box_plant_im,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
             fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
-            pickle.dump(fakecat,open(pickle_to+'_fakesource_cat{}.pkl'.format(str(i)),'wb'))
+            pickle.dump(fakecat.to_table(),open(pickle_to+'_fakesource_cat{}.pkl'.format(str(i)),'wb'))
 
             # detection efficiency  
             tmp = detection_efficiency(box_planted_orig,fakesource_cat)
@@ -878,7 +878,7 @@ def lco_pipe():
         # source properties of detected objs in fake image
         fakesource_cat = source_cat(plant_im,nsigma=nsigma,kernel_size=kernel_size,npixels=npixels,deblend=deblend,contrast=contrast,targ_coord=None)
         fakecat,fakeimage,fakethreshold,fakesegm,faketarg_obj = fakesource_cat # unpacked to make a little clearer
-        pickle.dump(fakecat,open(pickle_to+'_fakesource_cat.pkl','wb'))
+        pickle.dump(fakecat.to_table(),open(pickle_to+'_fakesource_cat.pkl','wb'))
 
         # detection efficiency  
         tmp = detection_efficiency(planted,fakesource_cat)
