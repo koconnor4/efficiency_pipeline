@@ -24,34 +24,29 @@ Giving snapshot of important results for test case of image going through the pi
     import efficiency_pipeline
 
     # Getting data from test case image needed for the pipeline
-    efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
+    # efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
+
+
 
 
 
 
 .. rst-class:: sphx-glr-script-out
 
+ Out:
 
-.. code-block:: pytb
+ .. code-block:: none
 
-    Traceback (most recent call last):
-      File "/work/oconnorf/efficiency_pipeline/Docs/source/_examples/plot_package.py", line 15, in <module>
-        efficiency_pipeline.lco_fakeSNpipeline.lco_pipe_ex()
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/efficiency_pipeline-0.0.1-py3.7.egg/efficiency_pipeline/lco_fakeSNpipeline.py", line 819, in lco_pipe_ex
-        glsn = ascii.read(os.path.join(path,'peakGLSN.csv'))
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/ui.py", line 287, in read
-        dat = _guess(table, new_kwargs, format, fast_reader)
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/ui.py", line 447, in _guess
-        dat = reader.read(table)
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/core.py", line 1165, in read
-        self.lines = self.inputter.get_lines(table)
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/io/ascii/core.py", line 305, in get_lines
-        encoding=self.encoding) as fileobj:
-      File "/home/oconnorf/miniconda/lib/python3.7/contextlib.py", line 112, in __enter__
-        return next(self.gen)
-      File "/home/oconnorf/miniconda/lib/python3.7/site-packages/astropy/utils/data.py", line 237, in get_readable_fileobj
-        fileobj = io.FileIO(name_or_obj, 'r')
-    FileNotFoundError: [Errno 2] No such file or directory: '/work/oconnorf/efficiency_pipeline/Docs/source/_examples/lco_pipe_example/sdssj2309-0039/peakGLSN.csv'
+    Created TAP+ (v1.2.1) - Connection:
+            Host: gea.esac.esa.int
+            Use HTTPS: True
+            Port: 443
+            SSL Port: 443
+    Created TAP+ (v1.2.1) - Connection:
+            Host: geadata.esac.esa.int
+            Use HTTPS: True
+            Port: 443
+            SSL Port: 443
 
 
 
@@ -59,7 +54,7 @@ Giving snapshot of important results for test case of image going through the pi
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 0 minutes  1.382 seconds)
+   **Total running time of the script:** ( 0 minutes  1.350 seconds)
 
 
 .. _sphx_glr_download_examples_plot_package.py:

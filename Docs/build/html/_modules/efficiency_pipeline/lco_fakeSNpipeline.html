@@ -1009,8 +1009,10 @@
     <span class="n">stars</span> <span class="o">=</span> <span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_stars.pdf&#39;</span>
     <span class="n">tde</span> <span class="o">=</span> <span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_target_detection_efficiency.pdf&#39;</span>
     <span class="n">gde</span> <span class="o">=</span> <span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_detection_efficiency.pdf&#39;</span>
-    <span class="n">plants</span> <span class="o">=</span> <span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_plants.pdf&#39;</span></div>
+    <span class="n">plants</span> <span class="o">=</span> <span class="n">pickle_to</span><span class="o">+</span><span class="s1">&#39;_plants.pdf&#39;</span>
 
+    <span class="k">return</span> <span class="n">image</span><span class="p">,</span><span class="n">diff_image</span><span class="p">,</span><span class="n">ref_image</span><span class="p">,</span><span class="n">glsnID</span></div>
+    
 <div class="viewcode-block" id="lco_pipe"><a class="viewcode-back" href="../../api.html#efficiency_pipeline.lco_fakeSNpipeline.lco_pipe">[docs]</a><span class="k">def</span> <span class="nf">lco_pipe</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">lco_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">date_key</span><span class="o">=</span><span class="s1">&#39;sbatch&#39;</span><span class="p">,</span><span class="n">field_key</span><span class="o">=</span><span class="s1">&#39;sbatch&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    pipeline that applies the epsf measurement, fake SN planting at different mags/locations, and detection efficiency measurement for groups of images.</span>
