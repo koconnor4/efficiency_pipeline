@@ -516,14 +516,14 @@ def cutfig(cut,saveas=None):
     return
 
 
-def phot(epsf,hdr):
+def phot(epsf,hdr,zp=None):
     skybr=hdr['WMSSKYBR'] # mag/arcsec^2
     l1med=hdr['L1MEDIAN'] # median sky pixel value
     l1fwhm=hdr['L1FWHM'] # PSF FWHM arcsec
     pixscale=hdr['PIXSCALE'] # arcsec/pixel
-    
-    # [mag/arcsec^2] wmsskybr = -2.5log10(l1median/pixscale [value/pixel]/[arcsec/pixel]) + zp
-    zp = skybr + 2.5*np.log10(l1med/pixscale/pixscale)
+    if zp == None
+        # [mag/arcsec^2] wmsskybr = -2.5log10(l1median/pixscale [value/pixel]/[arcsec/pixel]) + zp
+        zp = skybr + 2.5*np.log10(l1med/pixscale/pixscale)
     
     """
     # kfo this is wrong
@@ -1327,11 +1327,15 @@ def peter_pipe():
     cnt = 0
     for field_path in field_paths:
         try:
+
             my_data = {}
             print("____________________________________________________")
             field = os.path.basename(field_path)
             print(field)
             source_folder = os.path.join(field_path,'source')
+            gaia_folder = os.path.join(source_folder,'gaias')
+            ZP = pickle.load(open(gaia_folder+"/ZP.pkl","rb"))
+
             output_folder = os.path.join(source_folder,'output')
             if not os.path.exists(output_folder): 
                 os.makedirs(output_folder)
@@ -1370,8 +1374,8 @@ def peter_pipe():
 
             print('img,diff_img:',img,diff_img)
         except:
-            print('this field_path had issue with get source img,diff_img',field_path)
-            continue
+            print('this field_path had issue with get source img,diff_img, or ZP',field_path)
+            continue    
 
         a = r,img = gaia_results(img) # fov query
         #b = good_stars,r,img = stars2(a) # cuts 
@@ -1489,7 +1493,8 @@ def peter_pipe():
             # if you want a check; flux = Amplitude*(2pi*Sigma^2)
             # fcheck = np.max(epsfi)*(2*np.pi*(hdr['L1FWHM]/hdr['PIXSCALE'])**2) 
             epsfs.append(epsfi)
-            mi = phot(epsfi,hdr) # AB mag zp i have is coming from hdr param (mag/arcsec^2 sky brightness); to do exposures on gaia stars
+            zp = 
+            mi = phot(epsfi,hdr,zp=zp) # AB mag zp i have is coming from hdr param (mag/arcsec^2 sky brightness); to do exposures on gaia stars
             mags.append(mi)
         print("S/N (ratio pix data values ~ amplitude max epsf to median difference image)")
         print(sigmas)
