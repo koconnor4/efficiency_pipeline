@@ -54,6 +54,12 @@ import lco_figures
 import warnings
 warnings.filterwarnings('ignore')
 
+def sdssquery():
+    print("here is where I'll do my sdss query for working branch")
+    print("once I have it working I will merge it with master and delete the sdssquery branch")
+    print("can then also begin the long overdue branch cleanup as I go through efficiency with these new ZP")
+
+
 def get_data(path):
     my_data = {} 
     """
