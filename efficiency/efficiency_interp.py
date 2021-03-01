@@ -136,14 +136,43 @@ def df_efficiencies(verbose=False):
     t = Table.from_pandas(df)
     t = t[t['m50'] != np.ma.masked]
     if verbose:
-        print("{} df".format(len(df)))
-        print("{} df after removing those without efficiency (m50/alpha) values".format(len(t)))
+        print("{} df of diffs".format(len(df)))
+        print("{} df of diffs after removing those without efficiency (m50/alpha) values".format(len(t)))
     df = Table.to_pandas(t)    
     return df
 
+def df_survey(verbose=False):
+    """
+    Read in the locally pickled pandas DataFrame with headers from every observation so can interp values for efficiency
+    See read_survey for details of included exposures
+    """
+    df = pickle.load(open("survey/lco_headers_df.pkl","rb"))
+    if verbose:
+        print("{} df of all observation headers".format(len(df)))
+    return df
+
 if __name__ == "__main__":
-    df = df_efficiencies(verbose=True)
+    df = df_efficiencies(verbose=True) # the differences with m50/alpha fit for
+    survey = df_survey(verbose=True) # all the observation headers, will interp for m50/alpha and metc using data
+
     print('------------------------------')
+
+    metc = False
+    if metc:
+        # add column of metc to the headers using interp on the ETC 
+        coords = [] # want tuple (MOONFRAC,AIRMASS) as coord for etc_efficiency
+        metcs = []
+        survey['MOONFRAC'] = survey['MOONFRAC'].astype(float)
+        survey['AIRMASS'] = survey['AIRMASS'].astype(float)
+        for i in range(len(survey)):
+            moon = survey.iloc[i]['MOONFRAC']
+            airmass = survey.iloc[i]['AIRMASS']
+            coord = tuple([moon,airmass])
+            metc = etc_efficiency(coord,method='linear',rescale=True,fill_value=21)
+            coords.append(coord)
+            metcs.append(metc)
+        survey['metc'] = metcs
+        pickle.dump(survey,open("survey/lco_headers_df.pkl","wb"))
 
     interp = True
     if interp:
@@ -155,7 +184,7 @@ if __name__ == "__main__":
         fill_m50=21
         fill_alpha=2
 
-    single_coord = True
+    single_coord = False
     if single_coord:
         # example demonstrating the m50, alpha efficiency values at single params-coord
         coord = [90,1.5]
@@ -164,7 +193,7 @@ if __name__ == "__main__":
         print("m50={:.2f},alpha={:.2f} at {} ~ {}".format(m50,alpha,coord,params))
         print("----------------------------")
         
-    test_interp = True
+    test_interp = False
     if test_interp:
         # leave out one row of df at a time, interp over the rest
         # check m50 and alpha from that interp against the actual from pipeline 

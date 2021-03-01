@@ -425,13 +425,6 @@ def lco_xid_sdss_query():
     Note requires Visiblity.csv stored locally. Matches ra/dec of lco targets from Visibility.csv 
     to stars from sdss database
     """
-    Source_IDs = visibility['col1'] # Source IDs
-    ra_deg = visibility['col2']
-    dec_deg = visibility['col3'] 
-    for idx in range(1,len(visibility[1:])+1):
-        print("------------------------------")
-        obj,ra,dec = Source_IDs[idx],ra_deg[idx],dec_deg[idx]
-        print(idx,obj,ra,dec)
         
         """
         full_radius ~ pixscale * 2048 is arcsec from center of an LCO exposure image
