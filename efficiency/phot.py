@@ -33,12 +33,6 @@ plt.legend([obj_0, obj_1], ['Model Name A', 'Model Name B'],
            handler_map={obj_0:AnyObjectHandler(), obj_1:AnyObjectHandler()})
 """
 
-efficiency_sdss_flags = pickle.load(open("efficiency_sdss_flags.pkl","rb"))
-lco_matches = pickle.load(open("lco_matches.pkl","rb"))
-sdss_matches = pickle.load(open("sdss_matches.pkl","rb"))
-phot = pickle.load(open("phot.pkl","rb"))
-
-
 def ZPimage(lco_phot_tab,matched_sdss,plot=True,saveas="zp.png",scs=True):
     """
     Make png images showing the determination of ZP.
@@ -66,11 +60,17 @@ def ZPimage(lco_phot_tab,matched_sdss,plot=True,saveas="zp.png",scs=True):
         ZP,b = None,None
         return ZP,b
 
-    flux_lco,flux_unc_lco = np.array(lco_phot_tab['flux_fit']),np.array(lco_phot_tab['flux_unc'])
+    try:
+        # psf-phot table values
+        flux_lco,flux_unc_lco = np.array(lco_phot_tab['flux_fit']),np.array(lco_phot_tab['flux_unc'])
+    except:
+        # ap-phot table values
+        flux_lco,flux_unc_lco = np.array(lco_phot_tab['aper_sum_bkgsub']),np.array(lco_phot_tab['aperture_sum_err'])
+    
     rmag,rmagerr = np.array(matched_sdss['psfMag_r']),np.array(matched_sdss['psfMagErr_r'])
 
     # clip negative fluxes 
-    flux_clip = np.log10(lco_phot_tab['flux_fit'])
+    flux_clip = np.log10(flux_lco)
     indices = ~np.isnan(flux_clip)
     true_count = np.sum(indices)
     
@@ -161,9 +161,10 @@ def ZPimage(lco_phot_tab,matched_sdss,plot=True,saveas="zp.png",scs=True):
     badxerr = badlco_uncertainty
     fig,ax = plt.subplots(figsize=(16,8))
     coeffs,residuals,rank,singular_values,conditioning_threshold = np.polyfit(xi,rmag,1,w=weights,full=True)
+    _,cov = np.polyfit(xi,rmag,1,w=weights,cov=True)
     m,b =coeffs 
     #residual value returned is the sum of the squares of the fit errors
-    chisq = residuals[0]/true_count
+    chisq = residuals[0]
     print("chisq",chisq)
     if plot:
         ax.errorbar(xi,rmag,xerr=xerr,yerr=rmagerr,marker='x',ls='',color='red',label='')
@@ -194,9 +195,14 @@ def ZPimage(lco_phot_tab,matched_sdss,plot=True,saveas="zp.png",scs=True):
         return ZP,b,sigZP,chisq
     """
     
-    return ZP,b,sigZP,chisq
+    return true_count,ZP,sigZP,m,b,chisq,cov
 
 if __name__ == "__main__":
+    efficiency_sdss_flags = pickle.load(open("efficiency_sdss_flags.pkl","rb"))
+    lco_matches = pickle.load(open("lco_matches.pkl","rb"))
+    sdss_matches = pickle.load(open("sdss_matches.pkl","rb"))
+    phot = pickle.load(open("phot.pkl","rb"))
+
     print(len(efficiency_sdss_flags),len(lco_matches),len(sdss_matches),len(phot))
     # sort tables by origname
     res = [i for i in phot['origname']]

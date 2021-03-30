@@ -924,8 +924,8 @@ if __name__ == "__main__":
     avg_eNcc = np.mean(source_data['e_Ncc'])
     avg_Ncc = np.mean(source_data['Ncc'])
     avg_NIa = np.mean(source_data['NIa'])
-    percent_eNIa = avg_NIa/avg_eNIa
-    percent_eNcc = avg_Ncc/avg_eNcc
+    percent_eNIa = avg_eNIa/avg_NIa
+    percent_eNcc = avg_eNcc/avg_Ncc
 
     print("Average Percent SN Rate Errors")
     print("Ia {}, CC {}".format(percent_eNIa,percent_eNcc))
@@ -936,7 +936,7 @@ if __name__ == "__main__":
     if not os.path.exists(output_folder): 
         os.makedirs(output_folder)
     
-    run_simulation = True
+    run_simulation = False
     if run_simulation:
         # these lines will run the SN simulation and target observation/detection fcns 
         # should have batch args 0-97 for the 98 sources 
@@ -991,7 +991,7 @@ if __name__ == "__main__":
         # make a pdf of the result
         plot_peaks(d)
     
-    print_results = False
+    print_results = True
     if print_results:
         # these are used to print out some results
         rs = glob.glob("SNoutputs/*results.pkl")
@@ -999,8 +999,9 @@ if __name__ == "__main__":
         for r in rs:
             ri = pickle.load(open(r,'rb'))
             # this update adds some new useful stuff to results
-            update = yields_fracs_peaks_tobs(ri)
-            pickle.dump(update,open(r[:-4]+'_update.pkl','wb')) # r[:-4] to drop .pkl from r in glob of this lens result pkl
+            if False:
+                update = yields_fracs_peaks_tobs(ri)
+                pickle.dump(update,open(r[:-4]+'_update.pkl','wb')) # r[:-4] to drop .pkl from r in glob of this lens result pkl
             results.append(ri)
         print(len(results))
         ndetectSNe = [r[0] for r in results] 

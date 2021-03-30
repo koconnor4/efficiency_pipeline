@@ -54,6 +54,45 @@ class AnyObjectHandler(object):
         handlebox.add_artist(patch)
         return patch
 
+
+def detection(loc,sources,radius):
+    """
+    Parameters
+    -----------
+    loc ~ tuple [pixels]
+        (xp,yp) location of the object you want to see if is detected
+    sources ~ table 
+        the detected sources (DAOStarFinder or other)
+    radius ~ float [pixels]
+        search in circle around loc for sources
+    """
+    if sources == None:
+        detection = 0
+    else:
+        distances = [] 
+        for i in range(len(sources)):
+            xsource,ysource=sources['xcentroid'][i],sources['ycentroid'][i]
+            xloc,yloc = loc
+            distance=np.sqrt( (xloc - xsource)**2 + (yloc - ysource)**2 ) 
+            distances.append(distance)
+        nearest = np.min(distances)
+        if nearest < radius:
+            detection = 1
+        else:
+            detection = 0
+    
+    return detection
+
+def search_sdss(sdss,rs):
+    """
+    Given a list of r mag values take closest values from sdss['r'] table 
+    """
+    idxs = []
+    for r in rs:
+        idx = np.argmin(abs(sdss['r'] - r))
+        idxs.append(idx)
+    return sdss[idxs]
+
 def pixtosky(hdu,pixel):
     """
     Given a pixel location returns the skycoord
@@ -71,6 +110,10 @@ def skytopix(hdu,sky):
     hdr = hdu.header
     wcs,frame = WCS(hdr),hdr['RADESYS'].lower()
     pixel = wcsutils.skycoord_to_pixel(sky,wcs)
+    try:
+        pixel = list(zip(pixel[0],pixel[1]))
+    except:
+        pass
     return pixel
 
 def cut_hdu(hdu,location,size,writetodisk=False,saveas=None):
@@ -95,6 +138,59 @@ def cut_hdu(hdu,location,size,writetodisk=False,saveas=None):
     hdu.postage_stamp = cphdu
     
     return cphdu
+
+
+def plants_MEF(hdu,positions,cutoutsize=50,writetodisk=False,saveas='mef.fits'):
+    """
+    Create MEF Fits file with extensions to cutouts at positions with lxw of cutoutsize [pixels] in hdu
+    
+    For our purpose in efficiency_pipe this is used to get single fits with the planted fake sources...
+    # positions are locations of fakes  
+    # saveas like f'mag{m}fakes.fits'
+    
+    primary data empty, primary header has magnitude that the plants were scaled to
+    
+    Parameters
+    ----------
+    hdu : astropy.io.fits
+        The difference image being planted onto
+    positions : List-like 
+        n pixel positions to plant at in the diff. [(x1,y1),...(xn,yn)]
+    cutoutsize : int
+        number of pixels on a side for the image to be shown. We cut it in
+        half and use the integer component, so if an odd number or float is
+        provided it is rounded down to the preceding integer.
+    Returns
+    -----------
+    MEFs ~ astropy.io.fits 
+        an MEF with plants at positions on hdu 
+    """
+    
+    nfakes = len(positions)
+    diffim = hdu.data
+
+    # init the MEF
+    primary = fits.PrimaryHDU(data=None,header=None)
+    primary.header["Author"] = "Kyle OConnor"
+    primary.header["MEF"] = f'NFK{nfakes:03d}'
+    new_hdul = [primary] # fits.HDUList(new_hdul) after append all the fakes into new_hdul
+    for i in positions:
+        # grab cutouts
+        #print("position:",i)
+        diff_location = i # (xp,yp)
+        cutdiff = cut_hdu(hdu,diff_location,cutoutsize) # also accessible as hdu.postage_stamp
+        #cutsearch = cut_hdu(self.searchim,search_location,cutoutsize)
+        #cuttemp = cut_hdu(self.templateim,template_location,cutoutsize
+        try:
+            assert(fits.CompImageHDU == type(cutdiff))
+        except:
+            cutdiff = fits.CompImageHDU(data=hdu.postage_stamp.data,header=hdu.postage_stamp.header)            
+        new_hdul.append(hdu.postage_stamp)
+    
+    new_hdul = fits.HDUList(new_hdul)
+    if writetodisk:
+        new_hdul.writeto(saveas, overwrite=True)
+    return new_hdul
 
 
 def get_lattice_positions(hdu, edge=500, spacing=500):
@@ -174,6 +270,51 @@ def LCO_PSF_PHOT(hdu,init_guesses):
     residual_image = photometry.get_residual_image()
     
     return result_tab
+
+def LCO_AP_PHOT(hdu,init_guesses):
+    """Takes in a source catalog for stars in the image. Will perform
+    aperture photometry on the sources listed in this catalog.
+    Parameters
+    ----------
+    """
+    
+    ##TODO: Add something to handle overstaturated sources
+    
+    ##Set up the apertures
+    from photutils import CircularAperture , aperture_photometry , CircularAnnulus
+    #[(x0,y0)]=init_guesses
+    pixscale = hdu.header["PIXSCALE"]
+    FWHM = hdu.header["L1FWHM"]
+    aperture_radius = 2 * FWHM / pixscale
+    pos = init_guesses #Table(names=['x_0', 'y_0'], data=[[x0],[y0]]) 
+    apertures = CircularAperture(pos, r= aperture_radius)
+    annulus_aperture = CircularAnnulus(pos, r_in = aperture_radius + 5 , r_out = aperture_radius + 10)
+    annulus_masks = annulus_aperture.to_mask(method='center')
+    
+    ##Background subtraction using sigma clipped stats.
+    ##Uses a median value from the annulus
+    bkg_median = []
+    for mask in annulus_masks:
+        annulus_data = mask.multiply(hdu.data)
+        annulus_data_1d = annulus_data[mask.data > 0]
+        _ , median_sigclip, _ = sigma_clipped_stats(annulus_data_1d)
+        bkg_median.append(median_sigclip)
+    ##Perform photometry and subtract out background
+    bkg_median = np.array(bkg_median)
+    ##The pixel-wise Gaussian 1-sigma errors of the input data using sigma clipped stats.
+    ##Uses a std value from the hdu, needs to be the same shape as the input data
+    _, _, std_sigclip = sigma_clipped_stats(hdu.data)
+    error = np.zeros(hdu.data.shape) + std_sigclip
+    phot = aperture_photometry(hdu.data, apertures,error=error)
+    phot['annulus_median'] = bkg_median
+    phot['aper_bkg'] = bkg_median * apertures.area
+    
+    phot['aper_sum_bkgsub'] = phot['aperture_sum'] - phot['aper_bkg']
+    
+    phot['mag'] = -2.5 * np.log10( phot['aper_sum_bkgsub'] )
+    
+    #self.stellar_phot_table = phot
+    return phot
 
 def f_efficiency(m,m50,alpha):
     #https://arxiv.org/pdf/1509.06574.pdf, strolger 
@@ -633,5 +774,5 @@ if __name__ == "__main__":
     df.meta = {"ZPcalibrated":"sdss"}
     print(df)
     print(len(df))
-    pickle.dump(df,open("efficiency_sdss_flags.pkl","wb"))
+    pickle.dump(df,open("efficiencies.pkl","wb"))
     
