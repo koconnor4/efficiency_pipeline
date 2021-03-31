@@ -734,6 +734,117 @@ def table_header(hdu,idx=0):
     df = pd.DataFrame(data=d,index=[idx])
     return df
 
+def clean(df="LCO_HDRS_DF.pkl",pkl=False):
+    """
+    see lco_dl.py for the query into lco archive to retrieve every header for every file in our proposal:
+        Member of 4 proposals
+        Proposal: LCO2020B-015
+        151.934 out of 200.0 standard hours used on instrument type 1M0-SCICAM-SINISTRO for semester 2020B
+        Proposal: LCO2020A-019
+        0.000 out of 5.0 standard hours used on instrument type 2M0-SCICAM-SPECTRAL for semester 2020A
+        171.886 out of 200.0 standard hours used on instrument type 1M0-SCICAM-SINISTRO for semester 2020A
+        Proposal: LCO2019B-022
+        0.000 out of 0.0 standard hours used on instrument type 2M0-SCICAM-SPECTRAL for semester 2019B
+        117.587 out of 117.8 standard hours used on instrument type 1M0-SCICAM-SINISTRO for semester 2019B
+        Proposal: LCO2019A-008
+        202.580 out of 216.0 standard hours used on instrument type 1M0-SCICAM-SINISTRO for semester 2019A
+        0.573 out of 2.0 standard hours used on instrument type 2M0-SCICAM-SPECTRAL for semester 2019A
+
+    all headers for each file are stacked into pandas DataFrame survey/LCO_HDRS_DF.pkl 
+    here I will do a cleaning/analysis, remove duplicates and cuts on EXPTIME/FRMTOT
+    updated can pickled into lco_headers_df.pkl
+    """
+    lco = pickle.load(open(df,"rb"))
+    print("{} files in df".format(len(lco)))
+    clean = lco
+    import datetime
+    dates = []
+    for i in range(len(clean)):
+        date0 = clean.iloc[i]['DATE']
+        try:
+            date = date0[0]
+            date = date.split("'")[1]
+            date = date.split('T')[0]
+            date = date.split('-')
+            date = datetime.date(int(date[0]),int(date[1]),int(date[2]))
+            dates.append(date)
+            clean.iloc[i]['DATE'] = date
+        except:
+            date = date0.split("'")[1]
+            date = date.split('-')
+            date = datetime.date(int(date[0]),int(date[1]),int(date[2]))
+            dates.append(date)
+            clean.iloc[i]['DATE'] = date
+    clean['DATE'] = dates
+    print("{} files in df after datetime of DATE".format(len(clean)))
+    print("window of unfiltered clean:")
+    window(clean,verbose=True)
+    clean = clean[clean['EXPTIME'].astype(float) >= 125.0]
+    print("{} files in df after EXPTIME cuts".format(len(clean)))
+    print("window after EXPTIME cuts")
+    window(clean,verbose=True)
+    clean = clean[clean['FRMTOTAL'].astype(float) >= 2.0]
+    print("{} files in df after FRMTOTAL cuts".format(len(clean)))
+    print("window after FRMTOTAL cuts")
+    window(clean,verbose=True)
+    clean = clean.drop_duplicates(subset=['FILE'])
+    print("{} files in df after FILE drop_duplicates".format(len(clean)))
+    print("window after FILE drop_duplicates")
+    window(clean,verbose=True)
+
+    print("np.sum(EXPTIME) = {} hours".format(np.sum(clean['EXPTIME'].astype(float))/3600))
+    print("standard hours from four proposals = 202.58 + 117.59 + 171.89 + 151.93 = {}".format(202.58+117.59+171.89+151.93))
+    if pkl:
+        pickle.dump(clean,open("lco_headers_df.pkl","wb"))
+
+
+def get_obs(df,target):
+    """
+    List of all header observations for given target 
+    
+    Note assumes have local pickle lco_headers_df.pkl with headers of all of the observations from LCO survey
+        DATE in that DataFrame should be datetime.date
+
+    Parameters
+    -------------
+    df ~ pandas DataFrame
+        headers of all the observations in LCO survey
+    Returns
+    -----------
+    observations ~ list
+        every observation for the target
+    """
+    slate = df[df['TARGET']==target]
+    
+    return slate
+    
+def window(df,verbose=True):
+    """
+    The first, final, and duration (final-first) of observations in LCO survey
+
+    Note assumes have local pickle lco_headers_df.pkl with headers of all of the observations from LCO survey
+        DATE in that DataFrame should be datetime.date
+
+    Parameters
+    -----------
+    df ~ pandas DataFrame
+        headers of all the observations in LCO survey
+    Returns
+    -----------
+    window ~ dict
+        dict of datetimes... first,final,duration 
+    """
+    dates = df['DATE']
+    first = np.min(dates)
+    final = np.max(dates)
+    duration = final - first
+
+    window = {"first":first,"final":final,"duration":duration}
+    if verbose:
+        print(window)
+
+    return window
+
 if __name__ == "__main__":
     phots = glob.glob("*_phot.pkl")
     sdss_matches = glob.glob("*match_sdss*")

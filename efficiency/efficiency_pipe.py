@@ -145,10 +145,10 @@ def group_batch():
     for src in pyjobs:
         shutil.move(src,destination)
 
-def search_efficiency(hdu,diffhdu,templatehdu,match_radius=1,threshold_calibrate=10,threshold_limit=3,detection_radius=3):
+def search_efficiency(hdu,diffhdu,templatehdu,stop_before_diff=True,match_radius=1,threshold_calibrate=10,threshold_limit=3,detection_radius=3):
     """
     A pipeline to measure detection efficiency of point sources in LCO images. 
-    The PSF-flux with L1FWHM spread calibrated to AB magnitudes using ZP from sdss r-band data. 
+    The PSF-flux with L1FWHM spread calibrated to AB magnitudes using ZP from identical filter in sdss r-band data. 
 
     Note assumes lco_xid_query has been run. i.e. that sdss data is stored locally ~ sdss_queries/target_SDSS_CleanStar.csv
 
@@ -184,7 +184,7 @@ def search_efficiency(hdu,diffhdu,templatehdu,match_radius=1,threshold_calibrate
     psf_phot_tab : Astropy Table
         Photutils psf photometry on the stars in matched_lco
     stars : Astropy Table
-        SDSS-stars with added DAO detection data
+        SDSS-stars from search tested with DAO detection data
 
     Steps in pipeline:
     1. Use DAOFIND to detect stars suitable for ZP calibration in the LCO images, https://photutils.readthedocs.io/en/stable/detection.html
@@ -352,7 +352,7 @@ def search_efficiency(hdu,diffhdu,templatehdu,match_radius=1,threshold_calibrate
     except:
         print("Error: Matched < 5 stars, won't be reliable enough to do photometry and calibrate ZP.")
         df['flag'] = 'matching'
-        return df,matched_lco,matched_sdss,ap_phot_tab,psf_phot_tab   
+        return df,matched_lco,matched_sdss,ap_phot_tab,psf_phot_tab,stars   
 
     # Matched stars data
     df['Nmatch'] = Nmatch
@@ -504,6 +504,11 @@ def search_efficiency(hdu,diffhdu,templatehdu,match_radius=1,threshold_calibrate
 
     print('search efficiency ~ m50,alpha',search_efficiency_vals)
 
+    if stop_before_diff:
+        # skip the final step of doing plants with fluxes based on ZP for m50/alpha in the difference
+        return df,matched_lco,matched_sdss,ap_phot_tab,psf_phot_tab,stars
+
+
     # 7. Detect fake sources in the difference iamge and fit m50/alpha efficiency function
     print("\n")
     print("7. Adding PSF to difference in a grid")
@@ -589,7 +594,7 @@ if __name__ == "__main__":
     if group:
         group_batch()
 
-    test = True
+    test = False
     if test:
         batch_start = 0
         batch_end = 1
@@ -635,9 +640,12 @@ if __name__ == "__main__":
         except:
             print("Exposure and Difference have different origname")
             continue
-        
-        df,matched_lco,matched_sdss,ap_phot_tab,psf_phot_tab,stars = search_efficiency(hdu,diffhdu,templatehdu,match_radius=1,threshold_calibrate=10,threshold_limit=3,detection_radius=3)
-        dataframes.append(df)
+        try:
+            df,matched_lco,matched_sdss,ap_phot_tab,psf_phot_tab,stars = search_efficiency(hdu,diffhdu,templatehdu,stop_before_diff=True,match_radius=1,threshold_calibrate=10,threshold_limit=3,detection_radius=3)
+            dataframes.append(df)
+        except:
+            print("Error in pipe")
+            continue
 
     batch_result = pd.concat(dataframes)
     print("{} results".format(len(batch_result)))
